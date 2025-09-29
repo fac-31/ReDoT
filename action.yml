@@ -1,0 +1,10 @@
+name: "ReDoT"
+description: "Calls ChatGPT API to auto-generate docs and commits the response to the branch"
+author: "Sefi Potashnik, Connor Rowland, Jason Warren"
+inputs:
+  openai_api_key:
+    description: "OpenAI API key"
+    required: true
+runs:
+  using: "node16"
+  main: "index.js"

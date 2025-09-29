@@ -1,0 +1,11 @@
+name: ReDoT package test
+on: [pull]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./ # <-- This points to your local action (like "fac-31/ReDoT@v1")
+        with:
+          openai_api_key: "real and working key"
