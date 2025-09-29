@@ -1,5 +1,5 @@
 name: ReDoT package test
-on: [pull]
+on: [psuh, pull_request, workflow_dispatch]
 
 jobs:
   test:
