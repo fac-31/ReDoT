@@ -24,9 +24,9 @@ async function run() {
       core.info(`PR number: ${prNumber}`);
     }
 
-    const token = process.env.GITHUB_TOKEN ?? core.getInput('github_token', { required: true });
+    const token = process.env.GITHUB_TOKEN ?? core.getInput('github_token', { required: false });
     if (!token) {
-      core.error("GitHub token not provided.");
+      core.setFailed("GitHub token not provided.");
       return;
     }
 

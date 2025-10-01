@@ -4,9 +4,10 @@ on: [push, pull_request, workflow_dispatch]
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
       - uses: ./ # <-- This points to your local action (like "fac-31/ReDoT@v1")
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           openai_api_key: "real and working key"
