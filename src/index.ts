@@ -25,6 +25,13 @@ async function run() {
     }
 
     const token = core.getInput('github_token') || process.env.GITHUB_TOKEN;
+
+    core.info(`input: '${core.getInput('github_token') != null}'`);
+    core.info(`env: '${process.env.GITHUB_TOKEN != null}'`);
+
+    core.info(`input: '${core.getInput('github_token') != ""}'`);
+    core.info(`env: '${process.env.GITHUB_TOKEN != ""}'`);
+
     if (!token) {
       core.setFailed("GitHub token not provided.");
       process.exit(1);
