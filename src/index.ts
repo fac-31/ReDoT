@@ -24,10 +24,10 @@ async function run() {
       core.info(`PR number: ${prNumber}`);
     }
 
-    const token = process.env.GITHUB_TOKEN || core.getInput('github_token', { required: false });
+    const token = core.getInput('github_token') || process.env.GITHUB_TOKEN;
     if (!token) {
       core.setFailed("GitHub token not provided.");
-      return;
+      process.exit(1);
     }
 
     const octokit = github.getOctokit(token);
