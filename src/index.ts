@@ -1,6 +1,5 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import axios from 'axios';
 
 async function run() {
   try {
@@ -26,35 +25,8 @@ async function run() {
     const { owner, repo } = github.context.repo;
     const branch = github.context.ref.replace("refs/heads/", "");
 
-    const filePath = "chatgpt_output.txt";
-    const content = fs.readFileSync(filePath, "utf8");
-
-    // Get the file SHA if it already exists
-    let sha;
-    try {
-      const { data: file } = await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        path: filePath,
-        ref: branch
-      });
-      sha = file.sha;
-    } catch (e) {
-      core.info("File does not exist yet, creating new one.");
-    }
-
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: filePath,
-      message: "Update from action",
-      content: Buffer.from(content).toString("base64"),
-      branch,
-      sha
-    });
-
     core.info(`Committed changes to ${branch}`);
-  } catch (error) {
+  } catch (error: any) {
     core.setFailed(error.message);
   }
 
