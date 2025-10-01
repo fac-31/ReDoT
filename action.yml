@@ -5,6 +5,9 @@ inputs:
   openai_api_key:
     description: "OpenAI API key"
     required: true
+  github_token:
+    description: "GitHub token to use if write permission is not set in workflow"
+    required: false
 runs:
   using: "node16"
   main: "dist/index.js"

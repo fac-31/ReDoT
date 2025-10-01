@@ -32493,14 +32493,39 @@ async function run() {
         else {
             core.info(`PR number: ${prNumber}`);
         }
-        const token = process.env.GITHUB_TOKEN;
+        const token = core.getInput('github_token') || process.env.GITHUB_TOKEN;
         if (!token) {
-            core.error("GitHub token not provided.");
-            return;
+            core.setFailed("GitHub token not provided.");
+            process.exit(1);
         }
         const octokit = github.getOctokit(token);
         const { owner, repo } = github.context.repo;
         const branch = github.context.ref.replace("refs/heads/", "");
+        const filePath = "test.txt";
+        // Get the file SHA if it already exists
+        let sha;
+        try {
+            const response = await octokit.rest.repos.getContent({
+                owner,
+                repo,
+                path: filePath,
+                ref: branch
+            });
+            const file = response.data;
+            sha = file.sha;
+        }
+        catch (e) {
+            core.info("File does not exist yet, creating new one.");
+        }
+        await octokit.rest.repos.createOrUpdateFileContents({
+            owner,
+            repo,
+            path: filePath,
+            message: "Update from action",
+            content: Buffer.from("Banana!").toString("base64"),
+            branch,
+            sha
+        });
         core.info(`Committed changes to ${branch}`);
     }
     catch (error) {
