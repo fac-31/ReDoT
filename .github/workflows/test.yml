@@ -11,4 +11,3 @@ jobs:
       - uses: ./ # <-- This points to your local action (like "fac-31/ReDoT@v1")
         with:
           openai_api_key: "real and working key"
-          github_token: ${{ secrets.GITHUB_TOKEN }} # This is usually not required, but needed for local action
