@@ -1,0 +1,9 @@
+POST http://localhost:3000/api/update-documentation
+Content-Type: application/json
+
+{
+  "owner": "fac-31",
+  "repo": "Pro0623-StoryMaker",
+  "pull_number": 73,
+  "autoCommit": false
+}
