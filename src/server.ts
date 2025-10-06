@@ -4,6 +4,9 @@ import 'dotenv/config';
 import { ChatAnthropic } from "@langchain/anthropic";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 
+import * as core from '@actions/core';
+import * as github from '@actions/github';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -25,14 +28,14 @@ interface FunctionChange {
   existingDoc?: string;
   functionCode: string;
 }
-
+/*
 app.post('/api/update-documentation', async (req: Request, res: Response) => {
   const { owner, repo, pull_number } = req.body;
+*/
 
+export async function getChanges(owner: string, repo: string, pull_number: number, autoCommit: boolean = true) {
   if (!owner || !repo || !pull_number) {
-    return res.status(400).json({ 
-      error: 'Missing required parameters: owner, repo, and pull_number are required' 
-    });
+    core.error('Missing required parameters: owner, repo, and pull_number are required');
   }
 
   try {
@@ -47,9 +50,7 @@ app.post('/api/update-documentation', async (req: Request, res: Response) => {
     });
 
     if (!prResponse.ok) {
-      return res.status(prResponse.status).json({
-        error: `GitHub API error fetching PR: ${prResponse.statusText}`
-      });
+      core.error(`GitHub API error fetching PR: ${prResponse.statusText}`);
     }
 
     const prData = await prResponse.json();
@@ -70,9 +71,7 @@ app.post('/api/update-documentation', async (req: Request, res: Response) => {
     });
 
     if (!filesResponse.ok) {
-      return res.status(filesResponse.status).json({
-        error: `GitHub API error fetching files: ${filesResponse.statusText}`
-      });
+      return core.error(`GitHub API error fetching files: ${filesResponse.statusText}`);
     }
 
     const files = await filesResponse.json();
@@ -220,7 +219,7 @@ Provide the complete updated DOC.MD content.`;
     }
 
     // Step 6: Apply documentation updates to files (optional based on autoCommit flag)
-    const autoCommit = req.body.autoCommit || false;
+    // const autoCommit = req.body.autoCommit || false;
     const commitResults = [];
     
     if (autoCommit && documentationUpdates.filter(u => u.needsUpdate).length > 0) {
@@ -256,7 +255,7 @@ Provide the complete updated DOC.MD content.`;
     }
 
     // Return structured response
-    res.json({
+    return {
       pullRequest: {
         number: pull_number,
         headBranch,
@@ -272,15 +271,15 @@ Provide the complete updated DOC.MD content.`;
         functionsNeedingUpdate: documentationUpdates.filter(u => u.needsUpdate).length,
         filesUpdated: autoCommit ? commitResults.filter(r => r.success).length : 0
       }
-    });
+    };
 
   } catch (error) {
-    res.status(500).json({ 
-      error: 'Failed to update documentation',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    if (error instanceof Error)
+      core.error(error.message);
+    else
+      core.error('Failed to update documentation');
   }
-});
+};
 
 // Helper function to identify affected functions from patch
 function identifyAffectedFunctions(patch: string, fileContent: string, filename: string): FunctionChange[] {

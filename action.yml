@@ -2,8 +2,17 @@ name: "ReDoT"
 description: "Calls ChatGPT API to auto-generate docs and commits the response to the branch"
 author: "Sefi Potashnik, Connor Rowland, Jason Warren"
 inputs:
-  openai_api_key:
-    description: "OpenAI API key"
+  owner:
+    description: "Owner of the Repo"
+    required: true
+  repo:
+    description: "Repo name"
+    required: true
+  pull:
+    description: "Pull request number"
+    required: true
+  anthropic_api_key:
+    description: "Anthropic API key"
     required: true
   github_token:
     description: "GitHub token to use if write permission is not set in workflow"

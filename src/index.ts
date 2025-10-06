@@ -3,6 +3,8 @@ import * as github from '@actions/github';
 
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 
+import { getChanges } from './server';
+
 // Response type for repos.getContent
 type GetContentResponse =
   RestEndpointMethodTypes["repos"]["getContent"]["response"]["data"];
@@ -13,15 +15,15 @@ type FileContent = Extract<GetContentResponse, { type: "file" }>;
 async function run() {
   try {
     // Get inputs from action.yml
-    const openaiApiKey = core.getInput("openai_api_key", { required: true });
+    const input_owner = core.getInput("owner", { required: true });
+    const input_repo = core.getInput("repo", { required: true });
+    const input_pull = core.getInput("pull", { required: true });
+    const anthropic_api_key = core.getInput("anthropic_api_key", { required: true });
 
-    // Only present if the workflow is triggered by a PR event
-    const prNumber = github.context.payload.pull_request?.number;
-
-    if (!prNumber) {
+    if (!input_pull) {
       core.warning("This workflow was not triggered by a pull_request event.");
     } else {
-      core.info(`PR number: ${prNumber}`);
+      core.info(`PR number: ${input_pull}`);
     }
 
     const token = core.getInput('github_token') || process.env.GITHUB_TOKEN;
@@ -29,6 +31,10 @@ async function run() {
       core.setFailed("GitHub token not provided.");
       process.exit(1);
     }
+
+    const changes = getChanges(input_owner, input_repo, Number(input_pull));
+
+    console.log(changes);
 
     const octokit = github.getOctokit(token);
     const { owner, repo } = github.context.repo;
