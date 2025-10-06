@@ -1,8 +1,6 @@
 import express, { Request, Response } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
-
-import { ChatAnthropic } from "@langchain/anthropic";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
@@ -58,7 +56,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
 
     // Check if PR is from a fork
     const isFromFork = headRepo !== `${owner}/${repo}`;
-    
+
     if (isFromFork && autoCommit) {
       core.warning('PR is from a fork. Cannot auto-commit documentation updates to fork.');
       core.warning('Documentation updates will be returned but not committed.');
@@ -109,10 +107,8 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
       if (affectedFunctions.length === 0) continue;
 
       // Step 5: Ask Claude to update documentation for each function
-      const model = new ChatAnthropic({
-        anthropicApiKey: anthropic_api_key,
-        modelName: "claude-sonnet-4-20250514",
-        temperature: 0.3,
+      const anthropic = new Anthropic({
+        apiKey: anthropic_api_key,
       });
 
       for (const func of affectedFunctions) {
@@ -131,7 +127,7 @@ ${func.changes.join('\n')}
 **Full Function Context**:
 ${func.functionCode}
 
-**Task**: 
+**Task**:
 1. Determine if the changes warrant updating the function documentation
 2. If yes, provide updated JSDoc/comment block that should precede this function
 3. Provide a brief summary suitable for the DOC.MD file
@@ -144,10 +140,19 @@ ${func.functionCode}
   "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
 }`;
 
-        const response = await model.invoke(prompt);
+        const response = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          temperature: 0.3,
+          messages: [{ role: "user", content: prompt }],
+        });
         
         try {
-          const parsed = JSON.parse(response.content.toString());
+          const textBlock = response.content[0];
+          if (textBlock.type !== 'text') {
+            throw new Error('Expected text response from Claude');
+          }
+          const parsed = JSON.parse(textBlock.text);
           documentationUpdates.push({
             filename: file.filename,
             functionName: func.functionName,
@@ -170,13 +175,13 @@ ${func.functionCode}
     let existingDocMd = '';
     let docMdPath = '';
     let docMdSha = '';
-    
+
     // Try common documentation paths in the head branch
     const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'README.md', 'DOCUMENTATION.md'];
-    
+
     for (const path of commonDocPaths) {
       const docMdUrl = `https://api.github.com/repos/${headOwner}/${headRepoName}/contents/${path}?ref=${headBranch}`;
-      
+
       const docMdResponse = await fetch(docMdUrl, {
         headers: {
           'Accept': 'application/vnd.github+json',
@@ -196,12 +201,10 @@ ${func.functionCode}
 
     // Ask Claude to update DOC.MD only if there are updates
     let updatedDocMd = existingDocMd;
-    
+
     if (documentationUpdates.filter(u => u.needsUpdate).length > 0) {
-      const model = new ChatAnthropic({
-        anthropicApiKey: anthropic_api_key,
-        modelName: "claude-sonnet-4-20250514",
-        temperature: 0.3,
+      const anthropic = new Anthropic({
+        apiKey: anthropic_api_key,
       });
 
       const docMdPrompt = `You are updating a DOC.MD file based on changes from a pull request.
@@ -219,16 +222,25 @@ ${documentationUpdates
 
 Provide the complete updated DOC.MD content.`;
 
-      const docMdUpdateResponse = await model.invoke(docMdPrompt);
-      updatedDocMd = docMdUpdateResponse.content.toString();
+      const docMdUpdateResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 8192,
+        temperature: 0.3,
+        messages: [{ role: "user", content: docMdPrompt }],
+      });
+      const docTextBlock = docMdUpdateResponse.content[0];
+      if (docTextBlock.type !== 'text') {
+        throw new Error('Expected text response from Claude');
+      }
+      updatedDocMd = docTextBlock.text;
     }
 
     // Step 7: Apply documentation updates to files (optional based on autoCommit flag)
     const commitResults = [];
-    
+
     if (autoCommit && documentationUpdates.filter(u => u.needsUpdate).length > 0) {
       core.info(`Applying documentation updates to ${documentationUpdates.filter(u => u.needsUpdate).length} functions...`);
-      
+
       // Group updates by file
       const updatesByFile = new Map<string, typeof documentationUpdates>();
       for (const update of documentationUpdates.filter(u => u.needsUpdate)) {
@@ -245,13 +257,13 @@ Provide the complete updated DOC.MD content.`;
           const result = await applyDocumentationToFile(
             headOwner,
             headRepoName,
-            filename, 
-            updates, 
+            filename,
+            updates,
             headBranch,
             github_token
           );
           commitResults.push(result);
-          
+
           if (result.success) {
             core.info(`✓ Successfully updated ${filename} (commit: ${result.commitSha})`);
           } else {
@@ -281,13 +293,13 @@ Provide the complete updated DOC.MD content.`;
             headBranch,
             github_token
           );
-          
+
           if (docMdResult.success) {
             core.info(`✓ Successfully updated ${docMdPath} (commit: ${docMdResult.commitSha})`);
           } else {
             core.error(`✗ Failed to update ${docMdPath}: ${docMdResult.error}`);
           }
-          
+
           commitResults.push(docMdResult);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -336,7 +348,7 @@ Provide the complete updated DOC.MD content.`;
 // Helper function to identify affected functions from patch
 function identifyAffectedFunctions(patch: string, fileContent: string, filename: string): FunctionChange[] {
   const functions: FunctionChange[] = [];
-  
+
   if (!patch || !fileContent) return functions;
 
   const lines = patch.split('\n');
@@ -345,7 +357,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
 
   // Parse the unified diff to find changed line numbers
   let currentLine = 0;
-  
+
   for (const line of lines) {
     if (line.startsWith('@@')) {
       // Extract the starting line number from the new file
@@ -380,7 +392,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(export\s+(?:default\s+)?)?(?:async\s+)?(function\s*\*?)\s+(\w+)\s*\(/g,
       nameIndex: 3
     },
-    
+
     // 2. Anonymous functions assigned to variables
     // const myFunc = function() {}
     // const myFunc = async function() {}
@@ -389,7 +401,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?function\s*\*?\s*\(/g,
       nameIndex: 2
     },
-    
+
     // 3. Arrow functions (all variations)
     // const myFunc = () => {}
     // const myFunc = async () => {}
@@ -399,7 +411,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>/g,
       nameIndex: 2
     },
-    
+
     // 4. Arrow functions without parentheses (single param)
     // const myFunc = x => x * 2
     // const myFunc = async x => x * 2
@@ -407,7 +419,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(export\s+)?(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(\w+)\s*=>/g,
       nameIndex: 2
     },
-    
+
     // 5. Class methods (with modifiers)
     // async myMethod() {}
     // static myMethod() {}
@@ -418,13 +430,13 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(?:public|private|protected|static|readonly)?\s*(?:async\s+)?(\w+)\s*\([^)]*\)\s*(?::\s*\w+\s*)?\{/g,
       nameIndex: 1
     },
-    
+
     // 6. Constructor
     {
       pattern: /(constructor)\s*\([^)]*\)\s*\{/g,
       nameIndex: 1
     },
-    
+
     // 7. Getters and Setters
     // get myProp() {}
     // set myProp(value) {}
@@ -433,7 +445,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       nameIndex: 2,
       prefix: (match: RegExpExecArray) => match[1] // 'get' or 'set'
     },
-    
+
     // 8. Generator methods in classes
     // *myGenerator() {}
     // async *myAsyncGenerator() {}
@@ -441,7 +453,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(?:async\s+)?\*\s*(\w+)\s*\([^)]*\)\s*\{/g,
       nameIndex: 1
     },
-    
+
     // 9. Object method shorthand
     // { myMethod() {} }
     // { async myMethod() {} }
@@ -449,7 +461,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       pattern: /(\w+)\s*\([^)]*\)\s*\{/g,
       nameIndex: 1
     },
-    
+
     // 10. Private class methods (TypeScript/JavaScript)
     // #myPrivateMethod() {}
     {
@@ -457,27 +469,27 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       nameIndex: 1
     }
   ];
-  
+
   const foundFunctions: Array<{name: string, start: number, index: number}> = [];
 
   for (const patternConfig of functionPatterns) {
     const { pattern, nameIndex, prefix } = patternConfig;
     let match;
-    
+
     while ((match = pattern.exec(fileContent)) !== null) {
       let functionName = match[nameIndex];
       if (!functionName) continue;
-      
+
       // Add prefix if applicable (e.g., "get" or "set")
       if (prefix && typeof prefix === 'function') {
         const prefixValue = prefix(match);
         functionName = `${prefixValue} ${functionName}`;
       }
-      
+
       // Skip common control flow keywords that might match patterns
       const keywords = ['if', 'for', 'while', 'switch', 'catch', 'with'];
       if (keywords.includes(functionName)) continue;
-      
+
       const functionStartLine = fileContent.substring(0, match.index).split('\n').length;
       foundFunctions.push({
         name: functionName,
@@ -492,21 +504,21 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
 
   for (const func of foundFunctions) {
     const functionStartLine = func.start;
-    
+
     // Find the end of this function using brace matching
     let braceCount = 0;
     let functionEndLine = functionStartLine;
     let inString = false;
     let inComment = false;
     let stringChar = '';
-    
+
     for (let i = functionStartLine - 1; i < fileLines.length; i++) {
       const line = fileLines[i];
-      
+
       for (let j = 0; j < line.length; j++) {
         const char = line[j];
         const nextChar = line[j + 1];
-        
+
         // Handle comments
         if (!inString && char === '/' && nextChar === '/') {
           break; // Rest of line is comment
@@ -522,7 +534,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
           continue;
         }
         if (inComment) continue;
-        
+
         // Handle strings
         if ((char === '"' || char === "'" || char === '`') && (j === 0 || line[j - 1] !== '\\')) {
           if (!inString) {
@@ -534,24 +546,24 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
           }
         }
         if (inString) continue;
-        
+
         // Count braces
         if (char === '{') braceCount++;
         if (char === '}') braceCount--;
-        
+
         if (braceCount === 0 && char === '}') {
           functionEndLine = i + 1;
           break;
         }
       }
-      
+
       if (braceCount === 0 && functionEndLine !== functionStartLine) {
         break;
       }
     }
 
     // Check if any changed lines fall within this function
-    const functionsChangedLines = changedLines.filter(line => 
+    const functionsChangedLines = changedLines.filter(line =>
       line >= functionStartLine && line <= functionEndLine
     );
 
@@ -563,19 +575,19 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
       let docStartLine = -1;
       let docEndLine = -1;
       let foundDocBlock = false;
-      
+
       // Start from the line before the function
       for (let i = functionStartLine - 2; i >= 0; i--) {
         const line = fileLines[i];
         const trimmed = line.trim();
-        
+
         // Check if this is a comment line
-        const isComment = trimmed.startsWith('/**') || 
-                         trimmed.startsWith('/*') || 
-                         trimmed.startsWith('*') || 
+        const isComment = trimmed.startsWith('/**') ||
+                         trimmed.startsWith('/*') ||
+                         trimmed.startsWith('*') ||
                          trimmed.startsWith('//') ||
                          trimmed.startsWith('*/');
-        
+
         if (isComment) {
           // We're in a comment block
           if (docEndLine === -1) {
@@ -583,7 +595,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
           }
           docStartLine = i;
           foundDocBlock = true;
-          
+
           // If we hit the start of a JSDoc block, we can stop
           if (trimmed.startsWith('/**')) {
             break;
@@ -604,7 +616,7 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
           // - A decorator (e.g., @override, @deprecated)
           // - An export statement
           // - The previous function/statement (stop here)
-          
+
           // Check if it's a decorator or export modifier
           if (trimmed.startsWith('@') || trimmed.startsWith('export') || trimmed.startsWith('async')) {
             // Part of the function declaration, keep going
@@ -612,12 +624,12 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
             // If we found a doc block, this might be between doc and function
             if (docEndLine !== -1) continue;
           }
-          
+
           // We hit something else (likely previous function/statement)
           break;
         }
       }
-      
+
       // Extract the documentation if found
       if (docStartLine !== -1 && docEndLine !== -1) {
         existingDoc = fileLines.slice(docStartLine, docEndLine + 1).join('\n');
@@ -677,23 +689,23 @@ async function applyDocumentationToFile(
 
     for (const update of sortedUpdates) {
       const { line, inlineDocumentation, functionName } = update;
-      
+
       if (!inlineDocumentation) continue;
 
       // Find if there's existing documentation to replace
       let docStartLine = -1;
       let docEndLine = -1;
-      
+
       // Look backwards from the function line to find existing docs
       for (let i = line - 2; i >= 0; i--) {
         const trimmed = fileLines[i].trim();
-        
-        const isComment = trimmed.startsWith('/**') || 
-                         trimmed.startsWith('/*') || 
-                         trimmed.startsWith('*') || 
+
+        const isComment = trimmed.startsWith('/**') ||
+                         trimmed.startsWith('/*') ||
+                         trimmed.startsWith('*') ||
                          trimmed.startsWith('//') ||
                          trimmed.startsWith('*/');
-        
+
         if (isComment) {
           if (docEndLine === -1) docEndLine = i;
           docStartLine = i;
@@ -723,7 +735,7 @@ async function applyDocumentationToFile(
         let insertLine = line - 1;
         for (let i = line - 2; i >= 0; i--) {
           const trimmed = fileLines[i].trim();
-          if (trimmed.startsWith('@') || trimmed.startsWith('export') || 
+          if (trimmed.startsWith('@') || trimmed.startsWith('export') ||
               trimmed.startsWith('async') || trimmed.startsWith('static') ||
               trimmed.startsWith('public') || trimmed.startsWith('private') ||
               trimmed.startsWith('protected')) {
@@ -734,7 +746,7 @@ async function applyDocumentationToFile(
             break;
           }
         }
-        
+
         // Insert the documentation
         fileLines.splice(insertLine, 0, ...docLines, '');
       }
