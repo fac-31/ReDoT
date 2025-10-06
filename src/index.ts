@@ -32,7 +32,7 @@ async function run() {
       process.exit(1);
     }
 
-    const changes = getChanges(input_owner, input_repo, Number(input_pull));
+    const changes = await getChanges(input_owner, input_repo, Number(input_pull));
 
     console.log(changes);
 
