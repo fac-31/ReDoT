@@ -145,9 +145,16 @@ ${func.functionCode}
 }`;
 
         const response = await model.invoke(prompt);
+        const result = response.content.toString();
         
+        // Remove the code fences and trim whitespace
+        const cleaned = result
+          .replace(/```json\s*/i, '')  // remove opening ```json
+          .replace(/```$/, '')         // remove closing ```
+          .trim();
+
         try {
-          const parsed = JSON.parse(response.content.toString());
+          const parsed = JSON.parse(cleaned);
           documentationUpdates.push({
             filename: file.filename,
             functionName: func.functionName,
@@ -160,7 +167,7 @@ ${func.functionCode}
             filename: file.filename,
             functionName: func.functionName,
             line: func.startLine,
-            rawResponse: response.content.toString()
+            rawResponse: result
           });
         }
       }
