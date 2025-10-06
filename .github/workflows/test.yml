@@ -29,4 +29,4 @@ jobs:
           repo: ${{ inputs.repo }}
           pull: ${{ inputs.pull }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          github_token: ${{ secrets.GITHUB_TOKEN }} # This is usually not required, but needed for local action
+          github_token: ${{ secrets.API_GITHUB_TOKEN }} # This is usually not required, but needed for local action
