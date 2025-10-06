@@ -1,5 +1,20 @@
 name: ReDoT package test
-on: [workflow_dispatch]
+
+on:
+  workflow_dispatch:
+    inputs:
+      owner:
+        description: "Owner Name"
+        required: true
+        type: string
+      repo:
+        description: "Repo Name"
+        required: true
+        type: string
+      pull:
+        description: "Pull request number"
+        required: true
+        type: integer
 
 jobs:
   test:
@@ -10,5 +25,8 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ./ # <-- This points to your local action (like "fac-31/ReDoT@v1")
         with:
-          openai_api_key: "real and working key"
+          owner: ${{ inputs.owner }}
+          repo: ${{ inputs.repo }}
+          pull: ${{ inputs.pull }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           github_token: ${{ secrets.GITHUB_TOKEN }} # This is usually not required, but needed for local action
