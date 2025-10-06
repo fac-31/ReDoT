@@ -39,6 +39,7 @@ async function run() {
 
     const changes = await getChanges(input_owner, input_repo, Number(input_pull), anthropic_api_key, github_token);
 
+    //just adding a comment before console.log
     console.log(changes);
 /*
     const octokit = github.getOctokit(github_token);
