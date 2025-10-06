@@ -33,7 +33,7 @@ app.post('/api/update-documentation', async (req: Request, res: Response) => {
   const { owner, repo, pull_number } = req.body;
 */
 
-export async function getChanges(owner: string, repo: string, pull_number: number, github_token: string, autoCommit: boolean = true) {
+export async function getChanges(owner: string, repo: string, pull_number: number, anthropic_api_key: string, github_token: string, autoCommit: boolean = true) {
   if (!owner || !repo || !pull_number) {
     core.error('Missing required parameters: owner, repo, and pull_number are required');
   }
@@ -105,7 +105,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
 
       // Step 4: Ask Claude to update documentation for each function
       const model = new ChatAnthropic({
-        anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+        anthropicApiKey: anthropic_api_key,
         modelName: "claude-sonnet-4-20250514",
         temperature: 0.3,
       });
@@ -194,7 +194,7 @@ ${func.functionCode}
     
     if (documentationUpdates.filter(u => u.needsUpdate).length > 0) {
       const model = new ChatAnthropic({
-        anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+        anthropicApiKey: anthropic_api_key,
         modelName: "claude-sonnet-4-20250514",
         temperature: 0.3,
       });

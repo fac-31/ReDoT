@@ -18,7 +18,12 @@ async function run() {
     const input_owner = core.getInput("owner", { required: true });
     const input_repo = core.getInput("repo", { required: true });
     const input_pull = core.getInput("pull", { required: true });
+    
     const anthropic_api_key = core.getInput("anthropic_api_key", { required: true });
+    if (!anthropic_api_key) {
+      core.setFailed("Anthropic API key not provided.");
+      process.exit(1);
+    }
 
     if (!input_pull) {
       core.warning("This workflow was not triggered by a pull_request event.");
@@ -32,7 +37,7 @@ async function run() {
       process.exit(1);
     }
 
-    const changes = await getChanges(input_owner, input_repo, Number(input_pull), github_token);
+    const changes = await getChanges(input_owner, input_repo, Number(input_pull), anthropic_api_key, github_token);
 
     console.log(changes);
 /*
