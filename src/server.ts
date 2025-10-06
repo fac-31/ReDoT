@@ -28,14 +28,10 @@ interface FunctionChange {
   existingDoc?: string;
   functionCode: string;
 }
-/*
-app.post('/api/update-documentation', async (req: Request, res: Response) => {
-  const { owner, repo, pull_number } = req.body;
-*/
 
 export async function getChanges(owner: string, repo: string, pull_number: number, anthropic_api_key: string, github_token: string, autoCommit: boolean = true) {
   if (!owner || !repo || !pull_number) {
-    core.error('Missing required parameters: owner, repo, and pull_number are required');
+    throw new Error('Missing required parameters: owner, repo, and pull_number are required');
   }
 
   try {
@@ -50,7 +46,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     });
 
     if (!prResponse.ok) {
-      core.error(`GitHub API error fetching PR: ${prResponse.statusText}`);
+      throw new Error(`GitHub API error fetching PR: ${prResponse.statusText}`);
     }
 
     const prData = await prResponse.json();
@@ -59,6 +55,15 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     const headRepo = prData.head.repo.full_name; // Could be from a fork
     const headOwner = prData.head.repo.owner.login;
     const headRepoName = prData.head.repo.name;
+
+    // Check if PR is from a fork
+    const isFromFork = headRepo !== `${owner}/${repo}`;
+    
+    if (isFromFork && autoCommit) {
+      core.warning('PR is from a fork. Cannot auto-commit documentation updates to fork.');
+      core.warning('Documentation updates will be returned but not committed.');
+      autoCommit = false; // Disable auto-commit for forks
+    }
 
     // Step 2: Fetch PR file changes
     const filesUrl = `https://api.github.com/repos/${owner}/${repo}/pulls/${pull_number}/files`;
@@ -71,12 +76,12 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     });
 
     if (!filesResponse.ok) {
-      return core.error(`GitHub API error fetching files: ${filesResponse.statusText}`);
+      throw new Error(`GitHub API error fetching files: ${filesResponse.statusText}`);
     }
 
     const files = await filesResponse.json();
 
-    // Step 2: For each changed file, get the full content to find existing docs
+    // Step 3: For each changed file, get the full content to find existing docs
     const documentationUpdates = [];
 
     for (const file of files) {
@@ -98,12 +103,12 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
         currentFileContent = Buffer.from(contentData.content, 'base64').toString('utf-8');
       }
 
-      // Step 3: Identify functions affected by changes
+      // Step 4: Identify functions affected by changes
       const affectedFunctions = identifyAffectedFunctions(file.patch, currentFileContent, file.filename);
 
       if (affectedFunctions.length === 0) continue;
 
-      // Step 4: Ask Claude to update documentation for each function
+      // Step 5: Ask Claude to update documentation for each function
       const model = new ChatAnthropic({
         anthropicApiKey: anthropic_api_key,
         modelName: "claude-sonnet-4-20250514",
@@ -161,7 +166,7 @@ ${func.functionCode}
       }
     }
 
-    // Step 5: Get existing DOC.MD - look in common locations
+    // Step 6: Get existing DOC.MD - look in common locations
     let existingDocMd = '';
     let docMdPath = '';
     let docMdSha = '';
@@ -218,11 +223,12 @@ Provide the complete updated DOC.MD content.`;
       updatedDocMd = docMdUpdateResponse.content.toString();
     }
 
-    // Step 6: Apply documentation updates to files (optional based on autoCommit flag)
-    // const autoCommit = req.body.autoCommit || false;
+    // Step 7: Apply documentation updates to files (optional based on autoCommit flag)
     const commitResults = [];
     
     if (autoCommit && documentationUpdates.filter(u => u.needsUpdate).length > 0) {
+      core.info(`Applying documentation updates to ${documentationUpdates.filter(u => u.needsUpdate).length} functions...`);
+      
       // Group updates by file
       const updatesByFile = new Map<string, typeof documentationUpdates>();
       for (const update of documentationUpdates.filter(u => u.needsUpdate)) {
@@ -235,20 +241,61 @@ Provide the complete updated DOC.MD content.`;
       // Process each file
       for (const [filename, updates] of updatesByFile) {
         try {
+          core.info(`Updating documentation in ${filename}...`);
           const result = await applyDocumentationToFile(
             headOwner,
             headRepoName,
             filename, 
             updates, 
             headBranch,
-            github_token!
+            github_token
           );
           commitResults.push(result);
+          
+          if (result.success) {
+            core.info(`✓ Successfully updated ${filename} (commit: ${result.commitSha})`);
+          } else {
+            core.error(`✗ Failed to update ${filename}: ${result.error}`);
+          }
         } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          core.error(`✗ Exception updating ${filename}: ${errorMsg}`);
           commitResults.push({
             filename,
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: errorMsg
+          });
+        }
+      }
+
+      // Commit the updated DOC.MD file if it changed
+      if (updatedDocMd !== existingDocMd && docMdPath) {
+        try {
+          core.info(`Updating ${docMdPath}...`);
+          const docMdResult = await commitDocMdUpdate(
+            headOwner,
+            headRepoName,
+            docMdPath,
+            updatedDocMd,
+            docMdSha,
+            headBranch,
+            github_token
+          );
+          
+          if (docMdResult.success) {
+            core.info(`✓ Successfully updated ${docMdPath} (commit: ${docMdResult.commitSha})`);
+          } else {
+            core.error(`✗ Failed to update ${docMdPath}: ${docMdResult.error}`);
+          }
+          
+          commitResults.push(docMdResult);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          core.error(`✗ Exception updating ${docMdPath}: ${errorMsg}`);
+          commitResults.push({
+            filename: docMdPath,
+            success: false,
+            error: errorMsg
           });
         }
       }
@@ -260,7 +307,8 @@ Provide the complete updated DOC.MD content.`;
         number: pull_number,
         headBranch,
         baseBranch,
-        headRepo: `${headOwner}/${headRepoName}`
+        headRepo: `${headOwner}/${headRepoName}`,
+        isFromFork
       },
       functionDocumentationUpdates: documentationUpdates,
       updatedDocMd: updatedDocMd,
@@ -269,17 +317,21 @@ Provide the complete updated DOC.MD content.`;
       summary: {
         totalFunctionsAnalyzed: documentationUpdates.length,
         functionsNeedingUpdate: documentationUpdates.filter(u => u.needsUpdate).length,
-        filesUpdated: autoCommit ? commitResults.filter(r => r.success).length : 0
+        filesUpdated: autoCommit ? commitResults.filter(r => r.success).length : 0,
+        autoCommitEnabled: autoCommit
       }
     };
 
   } catch (error) {
-    if (error instanceof Error)
+    if (error instanceof Error) {
       core.error(error.message);
-    else
+      throw error;
+    } else {
       core.error('Failed to update documentation');
+      throw new Error('Failed to update documentation');
+    }
   }
-};
+}
 
 // Helper function to identify affected functions from patch
 function identifyAffectedFunctions(patch: string, fileContent: string, filename: string): FunctionChange[] {
@@ -730,6 +782,59 @@ async function applyDocumentationToFile(
     };
   }
 }
+
+// Helper function to commit DOC.MD updates
+async function commitDocMdUpdate(
+  owner: string,
+  repo: string,
+  docMdPath: string,
+  updatedContent: string,
+  currentSha: string,
+  branch: string,
+  githubToken: string
+): Promise<{ filename: string; success: boolean; commitSha?: string; error?: string }> {
+  try {
+    const newContentBase64 = Buffer.from(updatedContent, 'utf-8').toString('base64');
+
+    const commitUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${docMdPath}`;
+    const commitResponse = await fetch(commitUrl, {
+      method: 'PUT',
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${githubToken}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `docs: Update ${docMdPath} with PR changes`,
+        content: newContentBase64,
+        sha: currentSha,
+        branch: branch
+      })
+    });
+
+    if (!commitResponse.ok) {
+      const errorData = await commitResponse.json();
+      throw new Error(`Failed to commit: ${JSON.stringify(errorData)}`);
+    }
+
+    const commitData = await commitResponse.json();
+
+    return {
+      filename: docMdPath,
+      success: true,
+      commitSha: commitData.commit.sha
+    };
+
+  } catch (error) {
+    return {
+      filename: docMdPath,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
