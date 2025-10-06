@@ -33,7 +33,7 @@ app.post('/api/update-documentation', async (req: Request, res: Response) => {
   const { owner, repo, pull_number } = req.body;
 */
 
-export async function getChanges(owner: string, repo: string, pull_number: number, autoCommit: boolean = true) {
+export async function getChanges(owner: string, repo: string, pull_number: number, github_token: string, autoCommit: boolean = true) {
   if (!owner || !repo || !pull_number) {
     core.error('Missing required parameters: owner, repo, and pull_number are required');
   }
@@ -44,7 +44,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     const prResponse = await fetch(prUrl, {
       headers: {
         'Accept': 'application/vnd.github+json',
-        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+        'Authorization': `Bearer ${github_token}`,
         'X-GitHub-Api-Version': '2022-11-28'
       }
     });
@@ -65,7 +65,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     const filesResponse = await fetch(filesUrl, {
       headers: {
         'Accept': 'application/vnd.github+json',
-        'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+        'Authorization': `Bearer ${github_token}`,
         'X-GitHub-Api-Version': '2022-11-28'
       }
     });
@@ -87,7 +87,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
       const contentResponse = await fetch(contentUrl, {
         headers: {
           'Accept': 'application/vnd.github+json',
-          'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+          'Authorization': `Bearer ${github_token}`,
           'X-GitHub-Api-Version': '2022-11-28'
         }
       });
@@ -175,7 +175,7 @@ ${func.functionCode}
       const docMdResponse = await fetch(docMdUrl, {
         headers: {
           'Accept': 'application/vnd.github+json',
-          'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`,
+          'Authorization': `Bearer ${github_token}`,
           'X-GitHub-Api-Version': '2022-11-28'
         }
       });
@@ -241,7 +241,7 @@ Provide the complete updated DOC.MD content.`;
             filename, 
             updates, 
             headBranch,
-            process.env.GITHUB_TOKEN!
+            github_token!
           );
           commitResults.push(result);
         } catch (error) {

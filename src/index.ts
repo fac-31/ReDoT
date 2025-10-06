@@ -26,17 +26,17 @@ async function run() {
       core.info(`PR number: ${input_pull}`);
     }
 
-    const token = core.getInput('github_token') || process.env.GITHUB_TOKEN;
-    if (!token) {
+    const github_token: string | undefined = core.getInput('github_token') || process.env.GITHUB_TOKEN;
+    if (!github_token) {
       core.setFailed("GitHub token not provided.");
       process.exit(1);
     }
 
-    const changes = await getChanges(input_owner, input_repo, Number(input_pull));
+    const changes = await getChanges(input_owner, input_repo, Number(input_pull), github_token);
 
     console.log(changes);
-
-    const octokit = github.getOctokit(token);
+/*
+    const octokit = github.getOctokit(github_token);
     const { owner, repo } = github.context.repo;
     const branch = github.context.ref.replace("refs/heads/", "");
     
@@ -68,6 +68,7 @@ async function run() {
     });
 
     core.info(`Committed changes to ${branch}`);
+    */
   } catch (error: any) {
     core.setFailed(error.message);
   }
