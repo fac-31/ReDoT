@@ -1,22 +1,28 @@
 name: "ReDoT"
-description: "Calls ChatGPT API to auto-generate docs and commits the response to the branch"
+description: "Auto-generate and update documentation using AI (Claude) for pull requests"
 author: "Sefi Potashnik, Connor Rowland, Jason Warren"
+branding:
+  icon: "book-open"
+  color: "blue"
+
 inputs:
   owner:
-    description: "Owner of the Repo"
+    description: "Owner of the repository"
     required: true
   repo:
-    description: "Repo name"
+    description: "Repository name"
     required: true
   pull:
     description: "Pull request number"
     required: true
   anthropic_api_key:
-    description: "Anthropic API key"
+    description: "Anthropic API key for Claude AI"
     required: true
   github_token:
-    description: "GitHub token to use if write permission is not set in workflow"
+    description: "GitHub token (defaults to github.token if not provided)"
     required: false
+    default: ${{ github.token }}
+
 runs:
-  using: "node16"
+  using: "node20"
   main: "dist/index.js"

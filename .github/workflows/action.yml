@@ -1,22 +1,22 @@
 name: "ReDoT Action"
 description: "Run ReDoT checks on PRs"
+author: "Sefi Potashnik, Connor Rowland, Jason Warren"
 inputs:
-  owner:
-    required: true
-    description: "Owner name"
-  repo:
-    required: true
-    description: "Repo name"
-  pull:
-    required: true
-    description: "Pull request number"
-  anthropic_api_key:
-    required: true
-    description: "Anthropic API key"
-  github_token:
-    required: true
-    description: "GitHub API token"
-
+    owner:
+        required: true
+        description: "Owner name"
+    repo:
+        required: true
+        description: "Repo name"
+    pull:
+        required: true
+        description: "Pull request number"
+    anthropic_api_key:
+        required: true
+        description: "Anthropic API key"
+    github_token:
+        required: true
+        description: "GitHub API token"
 runs:
-  using: "node20"
-  main: "dist/index.js"
+    using: "node20"
+    main: "dist/index.js"

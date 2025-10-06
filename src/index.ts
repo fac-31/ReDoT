@@ -31,9 +31,10 @@ async function run() {
       core.info(`PR number: ${input_pull}`);
     }
 
-    const github_token: string | undefined = core.getInput('github_token') || process.env.GITHUB_TOKEN;
+    // Get GitHub token from input or fall back to the default GITHUB_TOKEN
+    const github_token: string = core.getInput('github_token') || process.env.GITHUB_TOKEN || '';
     if (!github_token) {
-      core.setFailed("GitHub token not provided.");
+      core.setFailed("GitHub token not provided. Please pass github_token input or ensure GITHUB_TOKEN is available.");
       process.exit(1);
     }
 
