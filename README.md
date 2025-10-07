@@ -40,16 +40,16 @@
 <details><summary><h3>1. Store Your Anthropic API Key</h3></summary>
 <ol>
     <li>Go to your repository on GitHub</li>
-    <li>Click **Settings** → **Secrets and variables** → **Actions**</li>
-    <li>Click **New repository secret**</li>
-    <li>Name: `ANTHROPIC_API_KEY`</li>
+    <li>Click <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong></li>
+    <li>Click <strong>New repository secret</strong></li>
+    <li>Name: <pre>ANTHROPIC_API_KEY</pre></li>
     <li>Value: Paste your Anthropic API key</li>
-    <li>Click **Add secret**</li>
+    <li>Click <strong>Add secret</strong></li>
 </ol>
 </details>
 
 <details><summary><h3>2. Create Workflow File</h3></summary>
-Create a file `.github/workflows/redot.yml` in your repository:
+Create a file <pre>.github/workflows/redot.yml</pre> in your repository:
 
 ```yaml
 name: Auto-generate Documentation
@@ -87,7 +87,7 @@ Once the workflow is set up, ReDoT will automatically run on every pull request!
 
 ## Configuration
 
-<details><summary><h3>### Inputs</h3></summary>
+<details><summary><h3>Inputs</h3></summary>
 <table>
     <tr>
         <th>Input</th>
@@ -96,33 +96,33 @@ Once the workflow is set up, ReDoT will automatically run on every pull request!
         <th>Description</th>
     </tr>
     <tr>
-        <td>`owner`</td>
+        <td><pre>owner</pre></td>
         <td>✅ Yes</td>
         <td>-</td>
         <td>Owner of the repository</td>
     </tr>
     <tr>
-        <td>`repo`</td>
+        <td><pre>repo</pre></td>
         <td>✅ Yes</td>
         <td>-</td>
         <td>Repository name</td>
     </tr>
     <tr>
-        <td>`pull`</td>
+        <td><pre>pull</pre></td>
         <td>✅ Yes</td>
         <td>-</td>
         <td>Pull request number</td>
     </tr>
     <tr>
-        <td>`anthropic_api_key`</td>
+        <td><pre>anthropic_api_key</pre></td>
         <td>✅ Yes</td>
         <td>-</td>
         <td>Your Anthropic API key for Claude</td>
     </tr>
     <tr>
-        <td>`github_token`</td>
+        <td><pre>github_token</pre></td>
         <td>❌ No</td>
-        <td>`${{ github.token }}`</td>
+        <td><pre>${{ github.token }}</pre></td>
         <td>GitHub token for API access</td>
     </tr>
 </table>
@@ -184,9 +184,9 @@ It recognizes:
 For multiple repositories:
 
 <ol>
-    <li>Go to your **Organization Settings**</li>
-    <li>Navigate to **Secrets and variables** → **Actions**</li>
-    <li>Create an organization-level secret named `ANTHROPIC_API_KEY`</li>
+    <li>Go to your <strong>Organization Settings</strong></li>
+    <li>Navigate to <strong>Secrets and variables</strong> → <strong>Actions</strong></li>
+    <li>Create an organization-level secret named <pre>ANTHROPIC_API_KEY</pre></li>
     <li>Select which repositories can access it</li>
 </ol>
 </details>
@@ -196,7 +196,7 @@ For multiple repositories:
 ## Troubleshooting
 
 <details><summary><h3>"GitHub token not provided"</h3></summary>
-<strong>**Solution:</strong> The action should automatically use <pre>${{ github.token }}</pre>. If this fails, explicitly provide it:
+<strong>Solution:</strong> The action should automatically use <pre>${{ github.token }}</pre>. If this fails, explicitly provide it:
 
 ```yaml
 with:
@@ -207,7 +207,7 @@ with:
 <details><summary><h3>"Anthropic API key not provided"</h3></summary>
 <strong>Solution:</strong> Ensure you've added the secret to your repository:
 <ol>
-    <li>Check Settings → Secrets → Actions</li>
+    <li>Check <strong>Settings</strong> → <strong>Secrets</strong> → <strong>Actions</strong></li>
     <li>Verify the secret is named exactly <pre>ANTHROPIC_API_KEY</pre></li>
     <li>Confirm your workflow references it correctly</li>
 </ol>
