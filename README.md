@@ -2,7 +2,7 @@
 
 **Re**-**Do**cument with **T**echnology
 
-> [!INFO]
+> [!NOTE]
 > GitHub Action that automatically generates and updates code documentation using AI (Claude by Anthropic) when pull requests are opened or updated.
 
 ---
