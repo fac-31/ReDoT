@@ -24,7 +24,7 @@
 
 <details><summary><h3>Getting an Anthropic API Key</h3></summary>
 <ol>
-    <li>Go to [https://console.anthropic.com/](https://console.anthropic.com/)</li>
+    <li>Go to the [Anthropic console](https://console.anthropic.com/)</li>
     <li>Sign up or log in to your account</li>
     <li>Navigate to **API Keys** in the dashboard</li>
     <li>Click **Create Key**</li>
