@@ -207,7 +207,7 @@ Added `sub(a, b)` function in examples/math.js - performs subtraction operation 
 Added `mul(a, b)` function in examples/math.js - performs multiplication of two numbers and returns the result.
 
 #### `div(a, b)`
-Added `div(a, b)` function in examples/math.js - performs division of two numbers, returns quotient as number
+Updated div() function documentation to accurately reflect that division by zero returns Infinity/NaN rather than throwing an error, and added examples for edge cases
 
 ---
 
