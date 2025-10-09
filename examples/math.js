@@ -61,12 +61,14 @@ function mul(a, b) {
  * 
  * @param {number} a - The dividend (number to be divided)
  * @param {number} b - The divisor (number to divide by)
- * @returns {number} The quotient of a divided by b
- * @throws {Error} When b is zero (division by zero)
+ * @returns {number} The quotient of a divided by b. Returns Infinity if b is 0 and a is positive, -Infinity if b is 0 and a is negative, or NaN if both a and b are 0
  * 
  * @example
  * div(10, 2); // returns 5
  * div(7, 3); // returns 2.333...
+ * div(10, 0); // returns Infinity
+ * div(-10, 0); // returns -Infinity
+ * div(0, 0); // returns NaN
  */
 
 function div(a, b) {
