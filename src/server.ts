@@ -1,21 +1,8 @@
-import express, { Request, Response } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to Express + TypeScript API' });
-});
 
 interface FunctionChange {
   filename: string;
@@ -846,8 +833,3 @@ async function commitDocMdUpdate(
     };
   }
 }
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
