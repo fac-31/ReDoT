@@ -147,12 +147,6 @@ ${func.functionCode}
           messages: [{ role: "user", content: prompt }],
         });
 
-        // Remove the code fences and trim whitespace
-        const cleaned = result
-          .replace(/```json\s*/i, '')  // remove opening ```json
-          .replace(/```$/, '')         // remove closing ```
-          .trim();
-
         try {
           const textBlock = response.content[0];
           if (textBlock.type !== 'text') {
