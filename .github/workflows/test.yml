@@ -5,15 +5,15 @@ on:
     inputs:
       owner:
         description: "Owner Name"
-        required: true
+        required: false
         type: string
       repo:
         description: "Repo Name"
-        required: true
+        required: false
         type: string
       pull:
         description: "Pull request number"
-        required: true
+        required: false
         type: integer
 
 jobs:

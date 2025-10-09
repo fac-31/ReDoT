@@ -1,21 +1,7 @@
-import express, { Request, Response } from 'express';
 import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 
 import * as core from '@actions/core';
-import * as github from '@actions/github';
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Welcome to Express + TypeScript API' });
-});
 
 interface FunctionChange {
   filename: string;
@@ -152,7 +138,14 @@ ${func.functionCode}
           if (textBlock.type !== 'text') {
             throw new Error('Expected text response from Claude');
           }
-          const parsed = JSON.parse(textBlock.text);
+
+          // Remove the code fences and trim whitespace
+          const cleaned = textBlock.text
+            .replace(/```json\s*/i, '')  // remove opening ```json
+            .replace(/```$/, '')         // remove closing ```
+            .trim();
+
+          const parsed = JSON.parse(cleaned);
           documentationUpdates.push({
             filename: file.filename,
             functionName: func.functionName,
@@ -479,6 +472,10 @@ function identifyAffectedFunctions(patch: string, fileContent: string, filename:
     while ((match = pattern.exec(fileContent)) !== null) {
       let functionName = match[nameIndex];
       if (!functionName) continue;
+
+      // Prevent matching functions we've already matched
+      if (foundFunctions.filter(info => info.name == functionName).length)
+        continue;
 
       // Add prefix if applicable (e.g., "get" or "set")
       if (prefix && typeof prefix === 'function') {
@@ -846,8 +843,3 @@ async function commitDocMdUpdate(
     };
   }
 }
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
