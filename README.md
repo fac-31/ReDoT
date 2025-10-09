@@ -153,6 +153,24 @@ with:
 
 ---
 
+## Function Documentation
+
+### examples/math.js
+
+#### `add(a, b)`
+Performs basic addition of two numbers and returns their sum.
+
+#### `sub(a, b)`
+Performs subtraction operation returning the difference between two numbers.
+
+#### `mul(a, b)`
+Performs multiplication of two numbers and returns the result.
+
+#### `div(a, b)`
+Divides two numbers and returns the quotient. Note: Does not handle division by zero validation.
+
+---
+
 ## Supported Languages
 
 ReDoT supports comprehensive function detection for:
@@ -208,50 +226,4 @@ with:
 <strong>Solution:</strong> Ensure you've added the secret to your repository:
 <ol>
     <li>Check <strong>Settings</strong> → <strong>Secrets</strong> → <strong>Actions</strong></li>
-    <li>Verify the secret is named exactly <pre>ANTHROPIC_API_KEY</pre></li>
-    <li>Confirm your workflow references it correctly</li>
-</ol>
-</details>
-
-<details><summary><h3>No documentation generated</h3></summary>
-<strong>Possible causes:</strong>
-<ul>
-    <li>No functions were modified in the PR</li>
-    <li>Changes were too minor to warrant documentation updates</li>
-    <li>Claude determined existing documentation was sufficient</li>
-</ul>
-</details>
-
-<details><summary><h3>Permission errors</h3></summary>
-<strong>Solution:</strong> Ensure your workflow has the correct permissions:
-
-```yaml
-permissions:
-  contents: write
-  pull-requests: read
-```
-</details>
-
----
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit issues or pull requests.
-
----
-
-## License
-
-[GNU AGPLv3](https://choosealicense.com/licenses/agpl-3.0/#)
-
----
-
-## Authors
-
-- [Sefi Potashnik](https://github.com/JosephPotashnik)
-- [Connor Rowland](https://github.com/FortyTwoFortyTwo)
-- [Jason Warren](https://github.com/JasonWarrenUK)
-
----
-
-**Powered by** [Claude](https://www.anthropic.com/claude) by Anthropic
+    <li>Verify the secret is named exactly <pre>ANTHROPIC_API_KEY
