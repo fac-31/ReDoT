@@ -193,6 +193,24 @@ For multiple repositories:
 
 ---
 
+## Function Documentation
+
+### examples/math.js
+
+#### `add(a, b)`
+Added `add(a, b)` function in examples/math.js - performs basic addition of two numbers and returns their sum.
+
+#### `sub(a, b)`
+Added `sub(a, b)` function in examples/math.js - performs subtraction operation returning the difference between two numbers
+
+#### `mul(a, b)`
+Added `mul(a, b)` function in examples/math.js - performs multiplication of two numbers and returns the result.
+
+#### `div(a, b)`
+Updated div() function documentation to accurately reflect that division by zero returns Infinity/NaN rather than throwing an error, and added examples for edge cases
+
+---
+
 ## Troubleshooting
 
 <details><summary><h3>"GitHub token not provided"</h3></summary>
