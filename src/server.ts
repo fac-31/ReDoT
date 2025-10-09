@@ -2,7 +2,6 @@ import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 
 import * as core from '@actions/core';
-import * as github from '@actions/github';
 
 interface FunctionChange {
   filename: string;

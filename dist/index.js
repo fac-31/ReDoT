@@ -26134,42 +26134,7 @@ async function run() {
             core.setFailed("GitHub token not provided. Please pass github_token input or ensure GITHUB_TOKEN is available.");
             process.exit(1);
         }
-        const changes = await (0, server_1.getChanges)(input_owner, input_repo, Number(input_pull), anthropic_api_key, github_token);
-        console.log(changes);
-        /*
-            const octokit = github.getOctokit(github_token);
-            const { owner, repo } = github.context.repo;
-            const branch = github.context.ref.replace("refs/heads/", "");
-            
-            const filePath = "test.txt";
-        
-            // Get the file SHA if it already exists
-            let sha: string | undefined;
-            try {
-              const response = await octokit.rest.repos.getContent({
-                owner,
-                repo,
-                path: filePath,
-                ref: branch
-              });
-              const file = response.data as FileContent;
-              sha = file.sha;
-            } catch (e) {
-              core.info("File does not exist yet, creating new one.");
-            }
-        
-            await octokit.rest.repos.createOrUpdateFileContents({
-              owner,
-              repo,
-              path: filePath,
-              message: "Update from action",
-              content: Buffer.from("Banana!").toString("base64"),
-              branch,
-              sha
-            });
-        
-            core.info(`Committed changes to ${branch}`);
-            */
+        await (0, server_1.getChanges)(input_owner, input_repo, Number(input_pull), anthropic_api_key, github_token);
     }
     catch (error) {
         core.setFailed(error.message);
