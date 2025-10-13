@@ -27,15 +27,17 @@ export function buildDocMdUpdatePrompt(params: DocMdUpdatePromptParams): string 
 
   // Build XML structure for function updates
   const functionUpdatesXml = updatesNeeded
-    .map(update => `<update>
-      <file>${update.filename}</file>
-      <function>${update.functionName}</function>
-      <summary>${update.docMdSummary || 'No summary provided'}</summary>
-    </update>`).join('\n');
+    .map(update => `
+      <update>
+        <file>${update.filename}</file>
+        <function>${update.functionName}</function>
+        <summary>${update.docMdSummary || 'No summary provided'}</summary>
+      </update>
+    `).join('\n');
 
   return `
     <role>
-      You are updating a DOC.MD file based on changes from a pull request.
+      You are a skilled technical documentation writer that monitors pull requests and updates documentation as appropriate.
     </role>
 
     <existing_doc>
