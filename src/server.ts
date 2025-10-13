@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 
 import * as core from '@actions/core';
+import { buildBatchFunctionDocPrompt, buildDocMdUpdatePrompt } from './prompts';
 
 interface FunctionChange {
   filename: string;
@@ -107,56 +108,11 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
 
       // Step 5: Ask Claude to update documentation for ALL functions in this file at once
       // This replaces the inner loop that processed each function individually
-      const functionsDescription = affectedFunctions.map((func, index) => 
-        `### Function ${index + 1}: ${func.functionName}
-**Lines**: ${func.startLine}-${func.endLine}
-
-**Existing Documentation**:
-${func.existingDoc || 'No existing documentation found'}
-
-**Changes Made**:
-${func.changes.join('\n')}
-
-**Full Function Code**:
-\`\`\`
-${func.functionCode}
-\`\`\`
-`
-      ).join('\n\n---\n\n');
-
-      const prompt = `You are a technical documentation expert. A pull request has made changes to a file with multiple functions.
-
-**File**: ${file.filename}
-
-**Full File Context**:
-\`\`\`
-${currentFileContent}
-\`\`\`
-
-**Affected Functions**:
-
-${functionsDescription}
-
-**Task**:
-For EACH function listed above:
-1. Determine if the changes warrant updating the function documentation
-2. If yes, provide updated JSDoc/comment block that should precede this function
-3. Provide a brief summary suitable for the DOC.MD file
-
-**Response Format** (JSON):
-{
-  "functions": [
-    {
-      "functionName": "name of function",
-      "needsUpdate": true/false,
-      "reason": "Brief explanation of why documentation needs/doesn't need update",
-      "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
-      "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
-    }
-  ]
-}
-
-IMPORTANT: Return a JSON object with a "functions" array containing one entry for each function in the order they were presented above.`;
+      const prompt = buildBatchFunctionDocPrompt({
+        filename: file.filename,
+        fileContent: currentFileContent,
+        affectedFunctions: affectedFunctions
+      });
 
       try {
         const response = await anthropic.messages.create({
@@ -165,7 +121,7 @@ IMPORTANT: Return a JSON object with a "functions" array containing one entry fo
           temperature: 0.3,
           messages: [{ role: "user", content: prompt }],
         });
-        
+
         const textBlock = response.content[0];
         if (textBlock.type !== 'text') {
           throw new Error('Expected text response from Claude');
@@ -262,20 +218,10 @@ IMPORTANT: Return a JSON object with a "functions" array containing one entry fo
     let updatedDocMd = existingDocMd;
 
     if (documentationUpdates.filter(u => u.needsUpdate).length > 0) {
-      const docMdPrompt = `You are updating a DOC.MD file based on changes from a pull request.
-
-**Existing DOC.MD**:
-${existingDocMd || 'No existing DOC.MD found'}
-
-**Function Updates**:
-${documentationUpdates
-  .filter(u => u.needsUpdate)
-  .map(u => `- ${u.filename} :: ${u.functionName}: ${u.docMdSummary}`)
-  .join('\n')}
-
-**Task**: Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
-
-Provide the complete updated DOC.MD content.`;
+      const docMdPrompt = buildDocMdUpdatePrompt({
+        existingDocMd,
+        documentationUpdates
+      });
 
       const docMdUpdateResponse = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",

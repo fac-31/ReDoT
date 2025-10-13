@@ -26145,6 +26145,216 @@ run();
 
 /***/ }),
 
+/***/ 8021:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * DOC.MD Update Prompt Template
+ *
+ * Generates a structured XML prompt for Claude to update the DOC.MD file
+ * based on function documentation changes from a pull request.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildDocMdUpdatePrompt = buildDocMdUpdatePrompt;
+/**
+ * Builds a DOC.MD update prompt using XML structure
+ * for improved semantic clarity and model understanding.
+ */
+function buildDocMdUpdatePrompt(params) {
+    const { existingDocMd, documentationUpdates } = params;
+    // Filter to only updates that need documentation
+    const updatesNeeded = documentationUpdates.filter(u => u.needsUpdate);
+    // Build XML structure for function updates
+    const functionUpdatesXml = updatesNeeded
+        .map(update => `<update>
+      <file>${update.filename}</file>
+      <function>${update.functionName}</function>
+      <summary>${update.docMdSummary || 'No summary provided'}</summary>
+    </update>`).join('\n');
+    return `
+    <role>
+      You are updating a DOC.MD file based on changes from a pull request.
+    </role>
+
+    <existing_doc>
+      ${existingDocMd || 'No existing DOC.MD found'}
+    </existing_doc>
+
+    <function_updates>
+      ${functionUpdatesXml}
+    </function_updates>
+
+    <task>
+      <overview>
+        Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
+
+        Provide the complete updated DOC.MD content.
+      </overview>
+
+      <inclusions>
+        For each of the following categories, either update DOC.md or verify it doesn't need updating
+
+        1. Usage information
+        2. Setup & installation
+        3. Troubleshooting
+        4. Diagrams showing data/information flow. Use mermaidjs syntax
+      </inclusions>
+    </task>
+  `;
+}
+
+
+/***/ }),
+
+/***/ 8657:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * Function Documentation Prompt Template
+ *
+ * Generates a structured XML prompt for Claude to analyze function changes
+ * and determine if documentation updates are needed.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildFunctionDocPrompt = buildFunctionDocPrompt;
+exports.buildBatchFunctionDocPrompt = buildBatchFunctionDocPrompt;
+/**
+ * Builds a function documentation analysis prompt using XML structure
+ * for improved semantic clarity and model understanding.
+ */
+function buildFunctionDocPrompt(params) {
+    const { filename, functionName, startLine, endLine, existingDoc, changes, functionCode } = params;
+    return `
+  <role>
+    You are a technical documentation expert analyzing changes in a pull request.
+  </role>
+
+  <context>
+    <file>${filename}</file>
+    <function>${functionName}</function>
+    <lines_changed>${startLine}-${endLine}</lines_changed>
+  </context>
+
+  <existing_documentation>
+    ${existingDoc || 'No existing documentation found'}
+  </existing_documentation>
+
+  <changes>
+    ${changes.join('\n')}
+  </changes>
+
+  <function_context>
+    ${functionCode}
+  </function_context>
+
+  <task>
+    1. Determine if the changes warrant updating the function documentation
+    2. If yes, provide updated JSDoc/comment block that should precede this function
+    3. Provide a brief summary suitable for the DOC.MD file
+  </task>
+
+  <response_format>
+    <json_schema>
+      {
+        "needsUpdate": true/false,
+        "reason": "Brief explanation of why documentation needs/doesn't need update",
+        "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
+        "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
+      }
+    </json_schema>
+  </response_format>`;
+}
+/**
+ * Builds a batch function documentation prompt for analyzing multiple functions
+ * in a single file at once (more efficient than individual function calls).
+ */
+function buildBatchFunctionDocPrompt(params) {
+    const { filename, fileContent, affectedFunctions } = params;
+    // Build XML structure for each affected function
+    const functionsXml = affectedFunctions.map((func, index) => `
+  <function index="${index + 1}">
+    <name>${func.functionName}</name>
+    <lines>${func.startLine}-${func.endLine}</lines>
+    <existing_documentation>
+${func.existingDoc || 'No existing documentation found'}
+    </existing_documentation>
+    <changes_made>
+${func.changes.join('\n')}
+    </changes_made>
+    <code>
+${func.functionCode}
+    </code>
+  </function>`).join('\n');
+    return `
+<role>
+  You are a technical documentation expert. A pull request has made changes to a file with multiple functions.
+</role>
+
+<context>
+  <file>${filename}</file>
+  <full_file_content>
+${fileContent}
+  </full_file_content>
+</context>
+
+<affected_functions>
+${functionsXml}
+</affected_functions>
+
+<task>
+  For EACH function listed above:
+  1. Determine if the changes warrant updating the function documentation
+  2. If yes, provide updated JSDoc/comment block that should precede this function
+  3. Provide a brief summary suitable for the DOC.MD file
+</task>
+
+<response_format>
+  <json_schema>
+{
+  "functions": [
+    {
+      "functionName": "name of function",
+      "needsUpdate": true/false,
+      "reason": "Brief explanation of why documentation needs/doesn't need update",
+      "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
+      "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
+    }
+  ]
+}
+  </json_schema>
+  <instruction>
+    Return a JSON object with a "functions" array containing one entry for each function in the order they were presented above.
+  </instruction>
+</response_format>`;
+}
+
+
+/***/ }),
+
+/***/ 831:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+/**
+ * Prompt Templates
+ *
+ * Centralized exports for all AI prompt templates used in ReDoT.
+ * These templates use XML structure for improved semantic clarity
+ * and model understanding.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildDocMdUpdatePrompt = exports.buildBatchFunctionDocPrompt = exports.buildFunctionDocPrompt = void 0;
+var functionDocumentation_1 = __nccwpck_require__(8657);
+Object.defineProperty(exports, "buildFunctionDocPrompt", ({ enumerable: true, get: function () { return functionDocumentation_1.buildFunctionDocPrompt; } }));
+Object.defineProperty(exports, "buildBatchFunctionDocPrompt", ({ enumerable: true, get: function () { return functionDocumentation_1.buildBatchFunctionDocPrompt; } }));
+var docMdUpdate_1 = __nccwpck_require__(8021);
+Object.defineProperty(exports, "buildDocMdUpdatePrompt", ({ enumerable: true, get: function () { return docMdUpdate_1.buildDocMdUpdatePrompt; } }));
+
+
+/***/ }),
+
 /***/ 1836:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -26190,6 +26400,7 @@ exports.getChanges = getChanges;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 __nccwpck_require__(2874);
 const core = __importStar(__nccwpck_require__(7484));
+const prompts_1 = __nccwpck_require__(831);
 async function getChanges(owner, repo, pull_number, anthropic_api_key, github_token, autoCommit = true) {
     if (!owner || !repo || !pull_number) {
         throw new Error('Missing required parameters: owner, repo, and pull_number are required');
@@ -26233,8 +26444,11 @@ async function getChanges(owner, repo, pull_number, anthropic_api_key, github_to
             throw new Error(`GitHub API error fetching files: ${filesResponse.statusText}`);
         }
         const files = await filesResponse.json();
-        // Step 3: For each changed file, get the full content to find existing docs
+        // Step 3: Process each file and group affected functions by file
         const documentationUpdates = [];
+        const anthropic = new sdk_1.default({
+            apiKey: anthropic_api_key,
+        });
         for (const file of files) {
             if (file.status === 'removed')
                 continue;
@@ -26252,82 +26466,90 @@ async function getChanges(owner, repo, pull_number, anthropic_api_key, github_to
                 const contentData = await contentResponse.json();
                 currentFileContent = Buffer.from(contentData.content, 'base64').toString('utf-8');
             }
-            // Step 4: Identify functions affected by changes
+            // Step 4: Identify functions affected by changes in this file
             const affectedFunctions = identifyAffectedFunctions(file.patch, currentFileContent, file.filename);
             if (affectedFunctions.length === 0)
                 continue;
-            // Step 5: Ask Claude to update documentation for each function
-            const anthropic = new sdk_1.default({
-                apiKey: anthropic_api_key,
+            // Step 5: Ask Claude to update documentation for ALL functions in this file at once
+            // This replaces the inner loop that processed each function individually
+            const prompt = (0, prompts_1.buildBatchFunctionDocPrompt)({
+                filename: file.filename,
+                fileContent: currentFileContent,
+                affectedFunctions: affectedFunctions
             });
-            for (const func of affectedFunctions) {
-                const prompt = `You are a technical documentation expert. A pull request has made changes to a function.
-
-**File**: ${file.filename}
-**Function**: ${func.functionName}
-**Lines Changed**: ${func.startLine}-${func.endLine}
-
-**Existing Documentation** (if any):
-${func.existingDoc || 'No existing documentation found'}
-
-**Changes Made**:
-${func.changes.join('\n')}
-
-**Full Function Context**:
-${func.functionCode}
-
-**Task**:
-1. Determine if the changes warrant updating the function documentation
-2. If yes, provide updated JSDoc/comment block that should precede this function
-3. Provide a brief summary suitable for the DOC.MD file
-
-**Response Format** (JSON):
-{
-  "needsUpdate": true/false,
-  "reason": "Brief explanation of why documentation needs/doesn't need update",
-  "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
-  "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
-}`;
+            try {
                 const response = await anthropic.messages.create({
                     model: "claude-sonnet-4-20250514",
-                    max_tokens: 4096,
+                    max_tokens: 8192,
                     temperature: 0.3,
                     messages: [{ role: "user", content: prompt }],
                 });
-                try {
-                    const textBlock = response.content[0];
-                    if (textBlock.type !== 'text') {
-                        throw new Error('Expected text response from Claude');
-                    }
-                    // Remove the code fences and trim whitespace
-                    const cleaned = textBlock.text
-                        .replace(/```json\s*/i, '') // remove opening ```json
-                        .replace(/```$/, '') // remove closing ```
-                        .trim();
-                    const parsed = JSON.parse(cleaned);
+                const textBlock = response.content[0];
+                if (textBlock.type !== 'text') {
+                    throw new Error('Expected text response from Claude');
+                }
+                // Remove the code fences and trim whitespace
+                const cleaned = textBlock.text
+                    .replace(/```json\s*/i, '')
+                    .replace(/```$/, '')
+                    .trim();
+                const parsed = JSON.parse(cleaned);
+                // Process the array of function updates
+                if (parsed.functions && Array.isArray(parsed.functions)) {
+                    // Match each response to the corresponding function by name or index
+                    parsed.functions.forEach((funcUpdate, index) => {
+                        // Try to match by function name first, fall back to index
+                        const matchedFunc = affectedFunctions.find(f => f.functionName === funcUpdate.functionName)
+                            || affectedFunctions[index];
+                        if (matchedFunc) {
+                            documentationUpdates.push({
+                                filename: file.filename,
+                                functionName: matchedFunc.functionName,
+                                line: matchedFunc.startLine,
+                                needsUpdate: funcUpdate.needsUpdate ?? false,
+                                reason: funcUpdate.reason || 'No reason provided',
+                                inlineDocumentation: funcUpdate.inlineDocumentation || null,
+                                docMdSummary: funcUpdate.docMdSummary || null
+                            });
+                        }
+                    });
+                }
+                else {
+                    // Fallback: if response format is unexpected, mark all functions as not needing update
+                    core.warning(`Unexpected response format for ${file.filename}`);
+                    affectedFunctions.forEach(func => {
+                        documentationUpdates.push({
+                            filename: file.filename,
+                            functionName: func.functionName,
+                            line: func.startLine,
+                            needsUpdate: false,
+                            reason: `Failed to parse response: unexpected format`,
+                            inlineDocumentation: null,
+                            docMdSummary: null
+                        });
+                    });
+                }
+            }
+            catch (parseError) {
+                // If Claude doesn't return valid JSON, mark all functions as not needing update
+                core.error(`Failed to parse response for ${file.filename}: ${parseError}`);
+                affectedFunctions.forEach(func => {
                     documentationUpdates.push({
                         filename: file.filename,
                         functionName: func.functionName,
                         line: func.startLine,
-                        ...parsed
+                        needsUpdate: false,
+                        reason: `Failed to parse response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
+                        inlineDocumentation: null,
+                        docMdSummary: null
                     });
-                }
-                catch (parseError) {
-                    // If Claude doesn't return valid JSON, store raw response
-                    documentationUpdates.push({
-                        filename: file.filename,
-                        functionName: func.functionName,
-                        line: func.startLine,
-                        rawResponse: response.content.toString()
-                    });
-                }
+                });
             }
         }
         // Step 6: Get existing DOC.MD - look in common locations
         let existingDocMd = '';
         let docMdPath = '';
         let docMdSha = '';
-        // Try common documentation paths in the head branch
         const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'README.md', 'DOCUMENTATION.md'];
         for (const path of commonDocPaths) {
             const docMdUrl = `https://api.github.com/repos/${headOwner}/${headRepoName}/contents/${path}?ref=${headBranch}`;
@@ -26349,23 +26571,10 @@ ${func.functionCode}
         // Ask Claude to update DOC.MD only if there are updates
         let updatedDocMd = existingDocMd;
         if (documentationUpdates.filter(u => u.needsUpdate).length > 0) {
-            const anthropic = new sdk_1.default({
-                apiKey: anthropic_api_key,
+            const docMdPrompt = (0, prompts_1.buildDocMdUpdatePrompt)({
+                existingDocMd,
+                documentationUpdates
             });
-            const docMdPrompt = `You are updating a DOC.MD file based on changes from a pull request.
-
-**Existing DOC.MD**:
-${existingDocMd || 'No existing DOC.MD found'}
-
-**Function Updates**:
-${documentationUpdates
-                .filter(u => u.needsUpdate)
-                .map(u => `- ${u.filename} :: ${u.functionName}: ${u.docMdSummary}`)
-                .join('\n')}
-
-**Task**: Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
-
-Provide the complete updated DOC.MD content.`;
             const docMdUpdateResponse = await anthropic.messages.create({
                 model: "claude-sonnet-4-20250514",
                 max_tokens: 8192,
