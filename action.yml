@@ -6,18 +6,21 @@ branding:
   color: "blue"
 
 inputs:
-  owner:
-    description: "Owner of the repository"
-    required: true
-  repo:
-    description: "Repository name"
-    required: true
-  pull:
-    description: "Pull request number"
-    required: true
   anthropic_api_key:
     description: "Anthropic API key for Claude AI"
     required: true
+  owner:
+    description: "Owner of the repository"
+    required: false
+    default: ${{ github.repository_owner }}
+  repo:
+    description: "Repository name"
+    required: false
+    default: ${{ github.event.repository.name }}
+  pull:
+    description: "Pull request number"
+    required: false
+    default: ${{ github.event.pull_request.number }}
   github_token:
     description: "GitHub token (defaults to github.token if not provided)"
     required: false

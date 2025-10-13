@@ -1,5 +1,4 @@
 import * as core from '@actions/core';
-import * as github from '@actions/github';
 
 import type { RestEndpointMethodTypes } from "@octokit/rest";
 
@@ -38,43 +37,7 @@ async function run() {
       process.exit(1);
     }
 
-    const changes = await getChanges(input_owner, input_repo, Number(input_pull), anthropic_api_key, github_token);
-
-    console.log(changes);
-/*
-    const octokit = github.getOctokit(github_token);
-    const { owner, repo } = github.context.repo;
-    const branch = github.context.ref.replace("refs/heads/", "");
-    
-    const filePath = "test.txt";
-
-    // Get the file SHA if it already exists
-    let sha: string | undefined;
-    try {
-      const response = await octokit.rest.repos.getContent({
-        owner,
-        repo,
-        path: filePath,
-        ref: branch
-      });
-      const file = response.data as FileContent;
-      sha = file.sha;
-    } catch (e) {
-      core.info("File does not exist yet, creating new one.");
-    }
-
-    await octokit.rest.repos.createOrUpdateFileContents({
-      owner,
-      repo,
-      path: filePath,
-      message: "Update from action",
-      content: Buffer.from("Banana!").toString("base64"),
-      branch,
-      sha
-    });
-
-    core.info(`Committed changes to ${branch}`);
-    */
+    await getChanges(input_owner, input_repo, Number(input_pull), anthropic_api_key, github_token);
   } catch (error: any) {
     core.setFailed(error.message);
   }
