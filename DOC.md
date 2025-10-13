@@ -32,7 +32,7 @@ Multiplies two numbers and returns their product.
 **Returns:** Number - The product of a and b
 
 #### `div(a, b)`
-Divides a by b and returns the quotient (returns Infinity if b is 0).
+Divides a by b and returns the quotient, returning Infinity when dividing by zero.
 
 **Parameters:**
 - `a` (number): Dividend
@@ -43,7 +43,7 @@ Divides a by b and returns the quotient (returns Infinity if b is 0).
 ### Core Server Functions (`src/server.ts`)
 
 #### `getChanges(owner, repo, pull_number, anthropic_api_key, github_token, autoCommit?)`
-Main function that analyzes GitHub pull requests to identify functions needing documentation updates. Uses Claude AI to generate comprehensive documentation and optionally commits changes back to the repository. Handles fork detection, batch processing of functions, and DOC.MD updates.
+Main function that analyzes GitHub pull requests to identify functions needing documentation updates. Uses Claude AI to generate comprehensive documentation and optionally commits changes back to the repository. Handles fork detection, batch processing of functions, and supports multiple documentation file locations including DOC.MD and DOCUMENTATION.md.
 
 **Parameters:**
 - `owner` (string): GitHub repository owner
@@ -69,7 +69,7 @@ const result5 = div(10, 0);    // Returns Infinity
 ```
 
 ### Documentation Analysis
-The `getChanges` function integrates with GitHub's API and Claude AI to automatically analyze pull requests and update documentation:
+The `getChanges` function integrates with GitHub's API and Claude AI to automatically analyze pull requests and update documentation. It now supports multiple documentation file formats and locations:
 
 ```typescript
 await getChanges(
@@ -81,6 +81,11 @@ await getChanges(
   true  // Auto-commit changes
 );
 ```
+
+**Supported Documentation Files:**
+- `DOC.MD` - Primary technical documentation
+- `DOCUMENTATION.md` - Alternative documentation location
+- Automatic detection and updating of existing documentation files
 
 ## Setup & Installation
 
@@ -113,6 +118,8 @@ Ensure the following packages are installed:
 - **Fork detection**: The system automatically detects if the PR is from a fork and adjusts commit behavior accordingly
 - **Authentication errors**: Verify that GitHub tokens have sufficient permissions for the target repository
 - **Large pull requests**: Function batching helps handle PRs with many changes, but very large PRs may require manual processing
+- **Documentation file detection**: If neither DOC.MD nor DOCUMENTATION.md exists, the system will create DOC.MD by default
+- **Multiple documentation files**: The system prioritizes DOC.MD over DOCUMENTATION.md when both exist
 
 ## System Architecture
 
@@ -125,12 +132,17 @@ graph TD
     E --> F[Batch Process Functions]
     F --> D
     D --> G[Generate Documentation]
-    G --> H[Update DOC.MD]
-    H --> I{Auto Commit?}
-    I -->|Yes| J[Commit to Repository]
-    I -->|No| K[Return Results]
-    J --> L[Documentation Updated]
+    G --> H{Documentation File Exists?}
+    H -->|DOC.MD| I[Update DOC.MD]
+    H -->|DOCUMENTATION.md| J[Update DOCUMENTATION.md]
+    H -->|None| K[Create DOC.MD]
+    I --> L{Auto Commit?}
+    J --> L
     K --> L
+    L -->|Yes| M[Commit to Repository]
+    L -->|No| N[Return Results]
+    M --> O[Documentation Updated]
+    N --> O
 ```
 
 ```mermaid
@@ -139,7 +151,7 @@ sequenceDiagram
     participant GC as getChanges
     participant GH as GitHub API
     participant AI as Claude AI
-    participant DOC as DOC.MD
+    participant DOC as Documentation Files
 
     PR->>GC: Trigger analysis
     GC->>GH: Fetch PR changes
@@ -147,7 +159,9 @@ sequenceDiagram
     GC->>GC: Extract functions
     GC->>AI: Analyze functions (batched)
     AI-->>GC: Return documentation
-    GC->>DOC: Update documentation
+    GC->>GC: Detect documentation file type
+    Note over GC: Supports DOC.MD, DOCUMENTATION.md
+    GC->>DOC: Update appropriate documentation file
     GC->>GH: Commit changes (if autoCommit)
     GH-->>PR: Documentation updated
 ```
