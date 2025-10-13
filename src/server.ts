@@ -192,7 +192,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     let docMdPath = '';
     let docMdSha = '';
 
-    const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'README.md', 'DOCUMENTATION.md'];
+    const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'DOCUMENTATION.md'];
 
     for (const path of commonDocPaths) {
       const docMdUrl = `https://api.github.com/repos/${headOwner}/${headRepoName}/contents/${path}?ref=${headBranch}`;
