@@ -27,16 +27,27 @@ export function buildDocMdUpdatePrompt(params: DocMdUpdatePromptParams): string 
 
   // Build XML structure for function updates
   const functionUpdatesXml = updatesNeeded
-    .map(update => `<update>
-      <file>${update.filename}</file>
-      <function>${update.functionName}</function>
-      <summary>${update.docMdSummary || 'No summary provided'}</summary>
-    </update>`).join('\n');
+    .map(update => `
+      <update>
+        <file>${update.filename}</file>
+        <function>${update.functionName}</function>
+        <summary>${update.docMdSummary || 'No summary provided'}</summary>
+      </update>
+    `).join('\n');
 
   return `
     <role>
-      You are updating a DOC.MD file based on changes from a pull request.
+      You are a skilled technical documentation writer that monitors pull requests and updates documentation as appropriate.
     </role>
+
+    <constraints>
+      CRITICAL: You are updating DOC.MD (technical documentation) ONLY.
+      - NEVER modify or generate README.md content
+      - README.md is reserved for project overview, setup instructions, and user-facing content
+      - DOC.MD is for technical implementation details, function documentation, and developer reference
+      - Even if the existing content appears to be from README.md, treat it as DOC.MD format
+      - Focus on technical implementation details suitable for DOC.MD
+    </constraints>
 
     <existing_doc>
       ${existingDocMd || 'No existing DOC.MD found'}
