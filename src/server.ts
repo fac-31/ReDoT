@@ -58,7 +58,8 @@ interface DocumentationUpdate {
  * console.log(`Updated ${result.summary.functionsNeedingUpdate} functions`);
  * ```
  * 
- * @note Automatically disables autoCommit for PRs from forks due to permission restrictions
+ * @note Automatically disables autoCommit for PRs from forks due to permission restrictions.
+ *       Searches for documentation files in multiple locations: DOC.md, docs/DOC.md, DOCUMENTATION.md
  */
 
 export async function getChanges(owner: string, repo: string, pull_number: number, anthropic_api_key: string, github_token: string, autoCommit: boolean = true) {
