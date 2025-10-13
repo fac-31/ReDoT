@@ -14,6 +14,16 @@ interface FunctionChange {
   functionCode: string;
 }
 
+interface DocumentationUpdate {
+  filename: string;
+  functionName: string;
+  line: number;
+  needsUpdate: boolean;
+  reason: string;
+  inlineDocumentation: string | null;
+  docMdSummary: string | null;
+}
+
 export async function getChanges(owner: string, repo: string, pull_number: number, anthropic_api_key: string, github_token: string, autoCommit: boolean = true) {
   if (!owner || !repo || !pull_number) {
     throw new Error('Missing required parameters: owner, repo, and pull_number are required');
@@ -66,8 +76,11 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
 
     const files = await filesResponse.json();
 
-    // Step 3: For each changed file, get the full content to find existing docs
-    const documentationUpdates = [];
+    // Step 3: Process each file and group affected functions by file
+    const documentationUpdates: DocumentationUpdate[] = [];
+    const anthropic = new Anthropic({
+      apiKey: anthropic_api_key,
+    });
 
     for (const file of files) {
       if (file.status === 'removed') continue;
@@ -88,7 +101,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
         currentFileContent = Buffer.from(contentData.content, 'base64').toString('utf-8');
       }
 
-      // Step 4: Identify functions affected by changes
+      // Step 4: Identify functions affected by changes in this file
       const affectedFunctions = identifyAffectedFunctions(file.patch, currentFileContent, file.filename);
 
       if (affectedFunctions.length === 0) continue;
