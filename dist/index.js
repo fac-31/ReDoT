@@ -26145,6 +26145,134 @@ run();
 
 /***/ }),
 
+/***/ 8021:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * DOC.MD Update Prompt Template
+ *
+ * Generates a structured XML prompt for Claude to update the DOC.MD file
+ * based on function documentation changes from a pull request.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildDocMdUpdatePrompt = buildDocMdUpdatePrompt;
+/**
+ * Builds a DOC.MD update prompt using XML structure
+ * for improved semantic clarity and model understanding.
+ */
+function buildDocMdUpdatePrompt(params) {
+    const { existingDocMd, documentationUpdates } = params;
+    // Filter to only updates that need documentation
+    const updatesNeeded = documentationUpdates.filter(u => u.needsUpdate);
+    // Build XML structure for function updates
+    const functionUpdatesXml = updatesNeeded
+        .map(update => `  <update>
+    <file>${update.filename}</file>
+    <function>${update.functionName}</function>
+    <summary>${update.docMdSummary}</summary>
+  </update>`)
+        .join('\n');
+    return `<role>You are updating a DOC.MD file based on changes from a pull request.</role>
+
+<existing_doc>
+${existingDocMd || 'No existing DOC.MD found'}
+</existing_doc>
+
+<function_updates>
+${functionUpdatesXml}
+</function_updates>
+
+<task>
+Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
+
+Provide the complete updated DOC.MD content.
+</task>`;
+}
+
+
+/***/ }),
+
+/***/ 8657:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * Function Documentation Prompt Template
+ *
+ * Generates a structured XML prompt for Claude to analyze function changes
+ * and determine if documentation updates are needed.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildFunctionDocPrompt = buildFunctionDocPrompt;
+/**
+ * Builds a function documentation analysis prompt using XML structure
+ * for improved semantic clarity and model understanding.
+ */
+function buildFunctionDocPrompt(params) {
+    const { filename, functionName, startLine, endLine, existingDoc, changes, functionCode } = params;
+    return `<role>You are a technical documentation expert analyzing changes in a pull request.</role>
+
+<context>
+  <file>${filename}</file>
+  <function>${functionName}</function>
+  <lines_changed>${startLine}-${endLine}</lines_changed>
+</context>
+
+<existing_documentation>
+${existingDoc || 'No existing documentation found'}
+</existing_documentation>
+
+<changes>
+${changes.join('\n')}
+</changes>
+
+<function_context>
+${functionCode}
+</function_context>
+
+<task>
+1. Determine if the changes warrant updating the function documentation
+2. If yes, provide updated JSDoc/comment block that should precede this function
+3. Provide a brief summary suitable for the DOC.MD file
+</task>
+
+<response_format>
+<json_schema>
+{
+  "needsUpdate": true/false,
+  "reason": "Brief explanation of why documentation needs/doesn't need update",
+  "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
+  "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
+}
+</json_schema>
+</response_format>`;
+}
+
+
+/***/ }),
+
+/***/ 831:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+/**
+ * Prompt Templates
+ *
+ * Centralized exports for all AI prompt templates used in ReDoT.
+ * These templates use XML structure for improved semantic clarity
+ * and model understanding.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildDocMdUpdatePrompt = exports.buildFunctionDocPrompt = void 0;
+var functionDocumentation_1 = __nccwpck_require__(8657);
+Object.defineProperty(exports, "buildFunctionDocPrompt", ({ enumerable: true, get: function () { return functionDocumentation_1.buildFunctionDocPrompt; } }));
+var docMdUpdate_1 = __nccwpck_require__(8021);
+Object.defineProperty(exports, "buildDocMdUpdatePrompt", ({ enumerable: true, get: function () { return docMdUpdate_1.buildDocMdUpdatePrompt; } }));
+
+
+/***/ }),
+
 /***/ 1836:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -26190,6 +26318,7 @@ exports.getChanges = getChanges;
 const sdk_1 = __importDefault(__nccwpck_require__(121));
 __nccwpck_require__(2874);
 const core = __importStar(__nccwpck_require__(7484));
+const prompts_1 = __nccwpck_require__(831);
 async function getChanges(owner, repo, pull_number, anthropic_api_key, github_token, autoCommit = true) {
     if (!owner || !repo || !pull_number) {
         throw new Error('Missing required parameters: owner, repo, and pull_number are required');
@@ -26261,33 +26390,15 @@ async function getChanges(owner, repo, pull_number, anthropic_api_key, github_to
                 apiKey: anthropic_api_key,
             });
             for (const func of affectedFunctions) {
-                const prompt = `You are a technical documentation expert. A pull request has made changes to a function.
-
-**File**: ${file.filename}
-**Function**: ${func.functionName}
-**Lines Changed**: ${func.startLine}-${func.endLine}
-
-**Existing Documentation** (if any):
-${func.existingDoc || 'No existing documentation found'}
-
-**Changes Made**:
-${func.changes.join('\n')}
-
-**Full Function Context**:
-${func.functionCode}
-
-**Task**:
-1. Determine if the changes warrant updating the function documentation
-2. If yes, provide updated JSDoc/comment block that should precede this function
-3. Provide a brief summary suitable for the DOC.MD file
-
-**Response Format** (JSON):
-{
-  "needsUpdate": true/false,
-  "reason": "Brief explanation of why documentation needs/doesn't need update",
-  "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
-  "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
-}`;
+                const prompt = (0, prompts_1.buildFunctionDocPrompt)({
+                    filename: file.filename,
+                    functionName: func.functionName,
+                    startLine: func.startLine,
+                    endLine: func.endLine,
+                    existingDoc: func.existingDoc,
+                    changes: func.changes,
+                    functionCode: func.functionCode
+                });
                 const response = await anthropic.messages.create({
                     model: "claude-sonnet-4-20250514",
                     max_tokens: 4096,
@@ -26352,20 +26463,10 @@ ${func.functionCode}
             const anthropic = new sdk_1.default({
                 apiKey: anthropic_api_key,
             });
-            const docMdPrompt = `You are updating a DOC.MD file based on changes from a pull request.
-
-**Existing DOC.MD**:
-${existingDocMd || 'No existing DOC.MD found'}
-
-**Function Updates**:
-${documentationUpdates
-                .filter(u => u.needsUpdate)
-                .map(u => `- ${u.filename} :: ${u.functionName}: ${u.docMdSummary}`)
-                .join('\n')}
-
-**Task**: Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
-
-Provide the complete updated DOC.MD content.`;
+            const docMdPrompt = (0, prompts_1.buildDocMdUpdatePrompt)({
+                existingDocMd,
+                documentationUpdates
+            });
             const docMdUpdateResponse = await anthropic.messages.create({
                 model: "claude-sonnet-4-20250514",
                 max_tokens: 8192,

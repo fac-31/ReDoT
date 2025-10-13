@@ -102,11 +102,19 @@ const cleaned = textBlock.text
 
 ## Prompt Templates
 
-Two main Claude prompts are currently inline strings:
-- **Function documentation prompt**: `src/server.ts:101-127`
-- **DOC.MD update prompt**: `src/server.ts:203-216`
+All Claude prompts use XML structure for improved semantic clarity and model understanding. Templates are located in `src/prompts/`:
 
-Note on line 217: There's a comment suggesting these should be moved to external template files.
+- **Function documentation prompt**: `src/prompts/functionDocumentation.ts`
+  - Function: `buildFunctionDocPrompt(params)`
+  - Used in: `src/server.ts:102-110`
+  - XML tags: `<role>`, `<context>`, `<existing_documentation>`, `<changes>`, `<function_context>`, `<task>`, `<response_format>`
+
+- **DOC.MD update prompt**: `src/prompts/docMdUpdate.ts`
+  - Function: `buildDocMdUpdatePrompt(params)`
+  - Used in: `src/server.ts:186-189`
+  - XML tags: `<role>`, `<existing_doc>`, `<function_updates>`, `<task>`
+
+Both templates are exported via `src/prompts/index.ts` for clean imports.
 
 ## Model Configuration
 
