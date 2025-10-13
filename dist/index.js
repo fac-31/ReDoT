@@ -26644,7 +26644,7 @@ async function getChanges(owner, repo, pull_number, anthropic_api_key, github_to
         let existingDocMd = '';
         let docMdPath = '';
         let docMdSha = '';
-        const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'DOCUMENTATION.md'];
+        const commonDocPaths = ['DOC.md', 'docs/DOC.md', 'DOCUMENTATION.md'];
         for (const path of commonDocPaths) {
             const docMdUrl = `https://api.github.com/repos/${headOwner}/${headRepoName}/contents/${path}?ref=${headBranch}`;
             const docMdResponse = await fetch(docMdUrl, {
