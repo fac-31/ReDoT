@@ -35,8 +35,7 @@ function mul(a, b) {
  * Divides the first number by the second number.
  * @param {number} a - The dividend (number to be divided)
  * @param {number} b - The divisor (number to divide by)
- * @returns {number} The quotient of a divided by b
- * @throws {Error} Returns Infinity if b is 0
+ * @returns {number} The quotient of a divided by b, or Infinity/-Infinity if b is 0, or NaN if both a and b are 0
  */
 
 function div(a, b) {
