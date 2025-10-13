@@ -10,7 +10,7 @@ export interface DocMdUpdatePromptParams {
   documentationUpdates: Array<{
     filename: string;
     functionName: string;
-    docMdSummary: string;
+    docMdSummary: string | null;
     needsUpdate: boolean;
   }>;
 }
@@ -30,7 +30,7 @@ export function buildDocMdUpdatePrompt(params: DocMdUpdatePromptParams): string 
     .map(update => `<update>
       <file>${update.filename}</file>
       <function>${update.functionName}</function>
-      <summary>${update.docMdSummary}</summary>
+      <summary>${update.docMdSummary || 'No summary provided'}</summary>
     </update>`).join('\n');
 
   return `

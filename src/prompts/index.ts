@@ -6,8 +6,8 @@
  * and model understanding.
  */
 
-export { buildFunctionDocPrompt } from './functionDocumentation';
-export type { FunctionDocPromptParams } from './functionDocumentation';
+export { buildFunctionDocPrompt, buildBatchFunctionDocPrompt } from './functionDocumentation';
+export type { FunctionDocPromptParams, FunctionInfo, BatchFunctionDocPromptParams } from './functionDocumentation';
 
 export { buildDocMdUpdatePrompt } from './docMdUpdate';
 export type { DocMdUpdatePromptParams } from './docMdUpdate';

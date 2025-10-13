@@ -44,19 +44,24 @@ npm run build
 ```
 PR Event → Fetch PR Details → Get Changed Files → Parse Diffs
     ↓
-Identify Functions in Changes (using 10 regex patterns)
+For each changed file:
+  ↓
+  Identify Functions in Changes (using 10 regex patterns)
+  ↓
+  Batch process ALL affected functions in file at once:
+    - Extract existing documentation for each
+    - Build full file context
+    - Ask Claude for updated docs for ALL functions (lines 111-123)
+    - Returns array of function updates
     ↓
-For each affected function:
-  - Extract existing documentation
-  - Build context (changes + full function code)
-  - Ask Claude for updated docs (lines 101-127)
-    ↓
-Aggregate updates → Ask Claude to update DOC.MD (lines 203-216)
+Aggregate all updates → Ask Claude to update DOC.MD (lines 221-224)
     ↓
 Apply changes to files (bottom-up to preserve line numbers)
     ↓
 Commit to PR branch (unless from fork)
 ```
+
+**Key Optimization**: Instead of making one Claude API call per function, the pipeline now batches all functions in a file into a single API call, significantly reducing API usage and improving performance.
 
 ### Function Detection (lines 380-464)
 
@@ -104,17 +109,24 @@ const cleaned = textBlock.text
 
 All Claude prompts use XML structure for improved semantic clarity and model understanding. Templates are located in `src/prompts/`:
 
-- **Function documentation prompt**: `src/prompts/functionDocumentation.ts`
+- **Batch function documentation prompt** (currently used): `src/prompts/functionDocumentation.ts`
+  - Function: `buildBatchFunctionDocPrompt(params)`
+  - Used in: `src/server.ts:111-115`
+  - Processes multiple functions in a single API call
+  - XML tags: `<role>`, `<context>`, `<affected_functions>` (with nested `<function>` tags), `<task>`, `<response_format>`
+  - Returns: JSON array with `{ functions: [...] }` structure
+
+- **Single function documentation prompt** (legacy/unused): `src/prompts/functionDocumentation.ts`
   - Function: `buildFunctionDocPrompt(params)`
-  - Used in: `src/server.ts:102-110`
+  - Kept for backward compatibility or single-function use cases
   - XML tags: `<role>`, `<context>`, `<existing_documentation>`, `<changes>`, `<function_context>`, `<task>`, `<response_format>`
 
 - **DOC.MD update prompt**: `src/prompts/docMdUpdate.ts`
   - Function: `buildDocMdUpdatePrompt(params)`
-  - Used in: `src/server.ts:186-189`
-  - XML tags: `<role>`, `<existing_doc>`, `<function_updates>`, `<task>`
+  - Used in: `src/server.ts:221-224`
+  - XML tags: `<role>`, `<existing_doc>`, `<function_updates>` (with nested `<update>` tags), `<task>`
 
-Both templates are exported via `src/prompts/index.ts` for clean imports.
+All templates are exported via `src/prompts/index.ts` for clean imports.
 
 ## Model Configuration
 

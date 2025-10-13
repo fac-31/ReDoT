@@ -2,7 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import 'dotenv/config';
 
 import * as core from '@actions/core';
-import { buildFunctionDocPrompt, buildDocMdUpdatePrompt } from './prompts';
+import { buildBatchFunctionDocPrompt, buildDocMdUpdatePrompt } from './prompts';
 
 interface FunctionChange {
   filename: string;
@@ -106,57 +106,84 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
 
       if (affectedFunctions.length === 0) continue;
 
-      // Step 5: Ask Claude to update documentation for each function
-      const anthropic = new Anthropic({
-        apiKey: anthropic_api_key,
+      // Step 5: Ask Claude to update documentation for ALL functions in this file at once
+      // This replaces the inner loop that processed each function individually
+      const prompt = buildBatchFunctionDocPrompt({
+        filename: file.filename,
+        fileContent: currentFileContent,
+        affectedFunctions: affectedFunctions
       });
 
-      for (const func of affectedFunctions) {
-        const prompt = buildFunctionDocPrompt({
-          filename: file.filename,
-          functionName: func.functionName,
-          startLine: func.startLine,
-          endLine: func.endLine,
-          existingDoc: func.existingDoc,
-          changes: func.changes,
-          functionCode: func.functionCode
-        });
-
+      try {
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
+          max_tokens: 8192,
           temperature: 0.3,
           messages: [{ role: "user", content: prompt }],
         });
 
-        try {
-          const textBlock = response.content[0];
-          if (textBlock.type !== 'text') {
-            throw new Error('Expected text response from Claude');
-          }
+        const textBlock = response.content[0];
+        if (textBlock.type !== 'text') {
+          throw new Error('Expected text response from Claude');
+        }
 
-          // Remove the code fences and trim whitespace
-          const cleaned = textBlock.text
-            .replace(/```json\s*/i, '')  // remove opening ```json
-            .replace(/```$/, '')         // remove closing ```
-            .trim();
+        // Remove the code fences and trim whitespace
+        const cleaned = textBlock.text
+          .replace(/```json\s*/i, '')
+          .replace(/```$/, '')
+          .trim();
 
-          const parsed = JSON.parse(cleaned);
-          documentationUpdates.push({
-            filename: file.filename,
-            functionName: func.functionName,
-            line: func.startLine,
-            ...parsed
+        const parsed = JSON.parse(cleaned);
+        
+        // Process the array of function updates
+        if (parsed.functions && Array.isArray(parsed.functions)) {
+          // Match each response to the corresponding function by name or index
+          parsed.functions.forEach((funcUpdate: any, index: number) => {
+            // Try to match by function name first, fall back to index
+            const matchedFunc = affectedFunctions.find(f => f.functionName === funcUpdate.functionName) 
+              || affectedFunctions[index];
+            
+            if (matchedFunc) {
+              documentationUpdates.push({
+                filename: file.filename,
+                functionName: matchedFunc.functionName,
+                line: matchedFunc.startLine,
+                needsUpdate: funcUpdate.needsUpdate ?? false,
+                reason: funcUpdate.reason || 'No reason provided',
+                inlineDocumentation: funcUpdate.inlineDocumentation || null,
+                docMdSummary: funcUpdate.docMdSummary || null
+              });
+            }
           });
-        } catch (parseError) {
-          // If Claude doesn't return valid JSON, store raw response
-          documentationUpdates.push({
-            filename: file.filename,
-            functionName: func.functionName,
-            line: func.startLine,
-            rawResponse: response.content.toString()
+        } else {
+          // Fallback: if response format is unexpected, mark all functions as not needing update
+          core.warning(`Unexpected response format for ${file.filename}`);
+          affectedFunctions.forEach(func => {
+            documentationUpdates.push({
+              filename: file.filename,
+              functionName: func.functionName,
+              line: func.startLine,
+              needsUpdate: false,
+              reason: `Failed to parse response: unexpected format`,
+              inlineDocumentation: null,
+              docMdSummary: null
+            });
           });
         }
+      } catch (parseError) {
+        // If Claude doesn't return valid JSON, mark all functions as not needing update
+        core.error(`Failed to parse response for ${file.filename}: ${parseError}`);
+        affectedFunctions.forEach(func => {
+          documentationUpdates.push({
+            filename: file.filename,
+            functionName: func.functionName,
+            line: func.startLine,
+            needsUpdate: false,
+            reason: `Failed to parse response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
+            inlineDocumentation: null,
+            docMdSummary: null
+          });
+        });
       }
     }
 
@@ -165,7 +192,6 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     let docMdPath = '';
     let docMdSha = '';
 
-    // Try common documentation paths in the head branch
     const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'README.md', 'DOCUMENTATION.md'];
 
     for (const path of commonDocPaths) {
@@ -192,10 +218,6 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     let updatedDocMd = existingDocMd;
 
     if (documentationUpdates.filter(u => u.needsUpdate).length > 0) {
-      const anthropic = new Anthropic({
-        apiKey: anthropic_api_key,
-      });
-
       const docMdPrompt = buildDocMdUpdatePrompt({
         existingDocMd,
         documentationUpdates
@@ -221,7 +243,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
       core.info(`Applying documentation updates to ${documentationUpdates.filter(u => u.needsUpdate).length} functions...`);
 
       // Group updates by file
-      const updatesByFile = new Map<string, typeof documentationUpdates>();
+      const updatesByFile = new Map<string, DocumentationUpdate[]>();
       for (const update of documentationUpdates.filter(u => u.needsUpdate)) {
         if (!updatesByFile.has(update.filename)) {
           updatesByFile.set(update.filename, []);
@@ -638,12 +660,7 @@ async function applyDocumentationToFile(
   owner: string,
   repo: string,
   filename: string,
-  updates: Array<{
-    functionName: string;
-    line: number;
-    inlineDocumentation: string;
-    existingDoc?: string;
-  }>,
+  updates: DocumentationUpdate[],
   branch: string,
   githubToken: string
 ): Promise<{ filename: string; success: boolean; commitSha?: string; error?: string }> {
