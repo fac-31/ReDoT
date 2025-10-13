@@ -24,6 +24,43 @@ interface DocumentationUpdate {
   docMdSummary: string | null;
 }
 
+/**
+ * Analyzes a GitHub pull request to identify functions that need documentation updates,
+ * generates updated documentation using Claude AI, and optionally commits the changes.
+ * 
+ * @param owner - GitHub repository owner/organization name
+ * @param repo - GitHub repository name
+ * @param pull_number - Pull request number to analyze
+ * @param anthropic_api_key - API key for Anthropic Claude AI service
+ * @param github_token - GitHub personal access token with repo permissions
+ * @param autoCommit - Whether to automatically commit documentation updates (default: true)
+ * 
+ * @returns Promise resolving to analysis results including:
+ *   - pullRequest: PR metadata (number, branches, fork status)
+ *   - functionDocumentationUpdates: Array of documentation updates for affected functions
+ *   - updatedDocMd: Updated DOC.MD content
+ *   - docMdPath: Path to the documentation file
+ *   - commitResults: Results of commit operations (if autoCommit enabled)
+ *   - summary: Statistics about the analysis and updates
+ * 
+ * @throws {Error} When required parameters are missing or GitHub/Anthropic API calls fail
+ * 
+ * @example
+ * ```typescript
+ * const result = await getChanges(
+ *   'owner',
+ *   'repo', 
+ *   123,
+ *   'anthropic-key',
+ *   'github-token',
+ *   true
+ * );
+ * console.log(`Updated ${result.summary.functionsNeedingUpdate} functions`);
+ * ```
+ * 
+ * @note Automatically disables autoCommit for PRs from forks due to permission restrictions
+ */
+
 export async function getChanges(owner: string, repo: string, pull_number: number, anthropic_api_key: string, github_token: string, autoCommit: boolean = true) {
   if (!owner || !repo || !pull_number) {
     throw new Error('Missing required parameters: owner, repo, and pull_number are required');
