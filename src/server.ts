@@ -99,32 +99,32 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
 
       for (const func of affectedFunctions) {
         const prompt = `You are a technical documentation expert. A pull request has made changes to a function.
-
-**File**: ${file.filename}
-**Function**: ${func.functionName}
-**Lines Changed**: ${func.startLine}-${func.endLine}
-
-**Existing Documentation** (if any):
-${func.existingDoc || 'No existing documentation found'}
-
-**Changes Made**:
-${func.changes.join('\n')}
-
-**Full Function Context**:
-${func.functionCode}
-
-**Task**:
-1. Determine if the changes warrant updating the function documentation
-2. If yes, provide updated JSDoc/comment block that should precede this function
-3. Provide a brief summary suitable for the DOC.MD file
-
-**Response Format** (JSON):
-{
-  "needsUpdate": true/false,
-  "reason": "Brief explanation of why documentation needs/doesn't need update",
-  "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
-  "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
-}`;
+          **File**: ${file.filename}
+          **Function**: ${func.functionName}
+          **Lines Changed**: ${func.startLine}-${func.endLine}
+  
+          **Existing Documentation** (if any):
+          ${func.existingDoc || 'No existing documentation found'}
+  
+          **Changes Made**:
+          ${func.changes.join('\n')}
+  
+          **Full Function Context**:
+          ${func.functionCode}
+  
+          **Task**:
+          1. Determine if the changes warrant updating the function documentation
+          2. If yes, provide updated JSDoc/comment block that should precede this function
+          3. Provide a brief summary suitable for the DOC.MD file
+  
+          **Response Format** (JSON):
+          {
+            "needsUpdate": true/false,
+            "reason": "Brief explanation of why documentation needs/doesn't need update",
+            "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
+            "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
+          }
+        `;
 
         const response = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -132,7 +132,7 @@ ${func.functionCode}
           temperature: 0.3,
           messages: [{ role: "user", content: prompt }],
         });
-        
+
         try {
           const textBlock = response.content[0];
           if (textBlock.type !== 'text') {
@@ -201,19 +201,19 @@ ${func.functionCode}
       });
 
       const docMdPrompt = `You are updating a DOC.MD file based on changes from a pull request.
-
-**Existing DOC.MD**:
-${existingDocMd || 'No existing DOC.MD found'}
-
-**Function Updates**:
-${documentationUpdates
-  .filter(u => u.needsUpdate)
-  .map(u => `- ${u.filename} :: ${u.functionName}: ${u.docMdSummary}`)
-  .join('\n')}
-
-**Task**: Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
-
-Provide the complete updated DOC.MD content.`;
+        **Existing DOC.MD**:
+        ${existingDocMd || 'No existing DOC.MD found'}
+        
+        **Function Updates**:
+        ${documentationUpdates
+          .filter(u => u.needsUpdate)
+          .map(u => `- ${u.filename} :: ${u.functionName}: ${u.docMdSummary}`)
+          .join('\n')}
+        
+        **Task**: Update the DOC.MD to reflect these changes. Maintain the existing structure and only update relevant sections or add new entries as needed.
+        
+        Provide the complete updated DOC.MD content.
+      `;
 
       const docMdUpdateResponse = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
