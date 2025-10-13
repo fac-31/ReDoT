@@ -30,40 +30,43 @@ export function buildFunctionDocPrompt(params: FunctionDocPromptParams): string 
     functionCode
   } = params;
 
-  return `<role>You are a technical documentation expert analyzing changes in a pull request.</role>
+  return `
+  <role>
+    You are a technical documentation expert analyzing changes in a pull request.
+  </role>
 
-<context>
-  <file>${filename}</file>
-  <function>${functionName}</function>
-  <lines_changed>${startLine}-${endLine}</lines_changed>
-</context>
+  <context>
+    <file>${filename}</file>
+    <function>${functionName}</function>
+    <lines_changed>${startLine}-${endLine}</lines_changed>
+  </context>
 
-<existing_documentation>
-${existingDoc || 'No existing documentation found'}
-</existing_documentation>
+  <existing_documentation>
+    ${existingDoc || 'No existing documentation found'}
+  </existing_documentation>
 
-<changes>
-${changes.join('\n')}
-</changes>
+  <changes>
+    ${changes.join('\n')}
+  </changes>
 
-<function_context>
-${functionCode}
-</function_context>
+  <function_context>
+    ${functionCode}
+  </function_context>
 
-<task>
-1. Determine if the changes warrant updating the function documentation
-2. If yes, provide updated JSDoc/comment block that should precede this function
-3. Provide a brief summary suitable for the DOC.MD file
-</task>
+  <task>
+    1. Determine if the changes warrant updating the function documentation
+    2. If yes, provide updated JSDoc/comment block that should precede this function
+    3. Provide a brief summary suitable for the DOC.MD file
+  </task>
 
-<response_format>
-<json_schema>
-{
-  "needsUpdate": true/false,
-  "reason": "Brief explanation of why documentation needs/doesn't need update",
-  "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
-  "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
-}
-</json_schema>
-</response_format>`;
+  <response_format>
+    <json_schema>
+      {
+        "needsUpdate": true/false,
+        "reason": "Brief explanation of why documentation needs/doesn't need update",
+        "inlineDocumentation": "Updated JSDoc comment block (or null if no update needed)",
+        "docMdSummary": "Brief summary for DOC.MD (or null if no update needed)"
+      }
+    </json_schema>
+  </response_format>`;
 }
