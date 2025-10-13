@@ -192,7 +192,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
     let docMdPath = '';
     let docMdSha = '';
 
-    const commonDocPaths = ['DOC.MD', 'docs/DOC.MD', 'DOCUMENTATION.md'];
+    const commonDocPaths = ['DOC.md', 'docs/DOC.md', 'DOCUMENTATION.md'];
 
     for (const path of commonDocPaths) {
       const docMdUrl = `https://api.github.com/repos/${headOwner}/${headRepoName}/contents/${path}?ref=${headBranch}`;
@@ -204,7 +204,7 @@ export async function getChanges(owner: string, repo: string, pull_number: numbe
           'X-GitHub-Api-Version': '2022-11-28'
         }
       });
-
+      
       if (docMdResponse.ok) {
         const docMdData = await docMdResponse.json();
         existingDocMd = Buffer.from(docMdData.content, 'base64').toString('utf-8');
